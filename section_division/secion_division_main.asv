@@ -2,7 +2,7 @@
 function secion_division_main()
 global LY;% 页面左边界
 global RY;% 页面右边界
-global RM;% 页面宽
+global PWIDTH;% 页面宽
 global ONE_CHAR_WIDTH;% 统计参数 一个中文字符的标准宽
 global ONE_TAB_WIDTH;% 统计参数 一个首行缩进的标准宽
 global ONE_ROW_HEIGHT;% 统计参数 一行的标准高
@@ -11,7 +11,7 @@ img = imread('page.jpg');
 [M,N] = size(img);
 ima = func_imgToGray(img);%转灰度图
 imb = func_imgToBin(ima);%二值化
-[LY,RY,RM]=func_findRealWidth(imb);%基本参数赋值
+func_getRealWidth(imb);%基本参数赋值
 func_statisticalParameter();%基本参数赋值
 ver = func_projectTo(imb,'vercial');%投影到垂直方向
 % figure;plot(ver,1:M);title('垂直方向像素');set(gca,'ydir','reverse');
@@ -19,16 +19,16 @@ ver = func_projectTo(imb,'vercial');%投影到垂直方向
 % func_showDivisiveImg(img,row_property,'line');%显示行切割
 func_getRowsProject(imb,row_property,row);%获得每一行水平方向的投影,保存到rows_hor_projection
 [s,section_property]=getSectionProperty(imb,row_property,row);
-
+func_showDivisiveImg(img,section_property,'rectangle');
 %% 获得每一行水平方向的投影,保存到rows_hor_projection
 function func_getRowsProject(img,rp,row)
 global LY;
-global RM;
+global PWIDTH;
 global rows_hor_projection;
 rows_hor_projection = cell(1,row);
 for i = 1:row
     h = rp(i,2)-rp(i,1)-1;
-    imp = func_getThePartOf(img,rp(i,1)+1,LY+1,h,RM);
+    imp = func_getThePartOf(img,rp(i,1)+1,LY+1,h,PWIDTH);
     rows_hor_projection{i}=func_projectTo(imp,'horizontal');
 end
 %% 根据左上角坐标和长宽取出图像的一部分
@@ -47,25 +47,26 @@ function [s,sp]=getSectionProperty(img,rp,row)
 %                           边界          1:  上边界      2:  下边界
 %                           标志          3:  缩进保留   4:  图片标志
 %                           包括行       5:  启始行      6:  结束行
-global RM;
+global PWIDTH;
 global ONE_CHAR_WIDTH;
 global ONE_TAB_WIDTH;
 s = 1;
 sp = zeros(row,6);
 for i = 1:row
     if(isImgSection(rp(i,:))==1)%是否为图片段
-        sp(i,:)=[rp(i,1),rp(i,2),1,1,i,i];%新建一段
+        head_blank = calcuBlank(i,rp(i,:));
+        sp(s,:)=[rp(i,1),rp(i,2),head_blank/PWIDTH,1,i,i];%新建一段
         s=s+1;
     else%非图片段
         head_blank = calcuBlank(i,rp(i,:));%计算开头的空白长度
-        if(head_blank> ONE_CHAR_WIDTH+10)%大于一个标准字符大小
+        if(head_blank> ONE_CHAR_WIDTH)%大于一个标准字符大小
             sp(s,:)=[rp(i,1),rp(i,2),0,0,i,i];%认为是新的一段
             if(head_blank>ONE_TAB_WIDTH)%大于一个标准缩进值
-                sp(s,3)=head_blank/RM;%计算它相对缩减值
+                sp(s,3)=head_blank/PWIDTH;%计算它相对缩减值
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(sp(s-1,4)==1)%上一段是否为图片
+            if(s==1 || sp(s-1,4)==1)%上一段是否为图片
                 sp(i, :)=[rp(i,1), rp(i,2), 0, 0, i, i];
                 s=s+1;
             else%非图片,合并
@@ -75,6 +76,8 @@ for i = 1:row
         end
     end
 end
+sp(s:end,:)=[];
+s=s-1;
 %% 计算行行首空格数
 function [head_blank]=calcuBlank(row,up,bottom)
 global rows_hor_projection;%每一行的水平投影
@@ -102,14 +105,17 @@ function func_statisticalParameter()
 global ONE_CHAR_WIDTH;% 统计参数 一个中文字符的标准宽
 global ONE_TAB_WIDTH;% 统计参数 一个首行缩进的标准宽
 global ONE_ROW_HEIGHT;% 统计参数 一行的标准高
-ONE_CHAR_WIDTH = ONE_CHAR_WIDTH*2.5;
-ONE_TAB_WIDTH = 46;
+ONE_CHAR_WIDTH = 23;
+ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*3.5);
 ONE_ROW_HEIGHT=32;
 %% 查找合适的页面宽
-function[LY,RY,width]=func_findRealWidth(imb)
+function func_getRealWidth(imb)
 % @输出
 % LY,RY为左右边界的x坐标
 % width为左右的宽度(这里取最大值)
+global LY;% 页面左边界
+global RY;% 页面右边界
+global PWIDTH;% 页面宽
 hor = func_projectTo(imb,'horizontal');
 % figure;plot(1:length(hor),hor);title('垂直方向像素');
 LY=1;
@@ -118,7 +124,7 @@ while(hor(LY)==0) LY=LY+1;end;
 while(hor(RY)==0) RY=RY-1;end;
 LY =LY-1;
 RY=RY-1;
-width=RY-LY-1;
+PWIDTH=RY-LY-1;
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(img,properties,type)
 % 输入
@@ -128,13 +134,22 @@ function  func_showDivisiveImg(img,properties,type)
 global LY;
 global RY;
 global RM;
+global PWIDTH;
 figure;imshow(img);set(gca,'position',[0,0,1,1]);
 % [M,N,O]=size(img);
+n = size(properties,1);
 switch type
     case 'line'
-        row = size(properties,1);
         line([LY,RY],[properties(:,1),properties(:,1)]);
         line([LY,RY],[properties(:,2),properties(:,2)]);
+    case 'rectange'
+        %rectangle('Position',temp,'LineWidth',2,'LineStyle','-','edgecolor','b')
+        for i=1:n
+            x = properties(i,1)+1;
+            y = LY+1;
+            width = RM;
+            height=properties(i,2)-properties(i,1)-1;
+        end
 end
 %% 从垂直投影中获得行信息
 function[row,row_property]=func_getRowProperty(ver)
