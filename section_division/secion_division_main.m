@@ -7,20 +7,21 @@ global ONE_CHAR_WIDTH;% 统计参数 一个中文字符的标准宽
 global ONE_TAB_WIDTH;% 统计参数 一个首行缩进的标准宽
 global ONE_ROW_HEIGHT;% 统计参数 一行的标准高
 global rows_hor_projection;%每一行的水平投影
-img = imread('test\MATLAB编程入门教程_页面_05.jpg');
+img = imread('page.jpg');
 [M,N] = size(img);
 ima =img;
 if (size(img,3) ~= 1)
     ima = func_imgToGray(img);%转灰度图
 end
+figure;imshow(ima);set(gca,'position',[0,0,1,1]);%显示图像
 imb = func_imgToBin(ima);%二值化
 func_getRealWidth(imb);%基本参数赋值
-func_statisticalParameter();%基本参数赋值
 ver = func_projectTo(imb,'vercial');%投影到垂直方向
 % figure;plot(ver,1:M);title('垂直方向像素');set(gca,'ydir','reverse');
 [row,row_property]= func_getRowProperty(ver);%从垂直投影中获得行信息
 func_showDivisiveImg(img,row_property,'line');%显示行切割
 func_getRowsProject(imb,row_property,row);%获得每一行水平方向的投影,保存到rows_hor_projection
+func_statisticalParameter(row_property);%基本参数统计求均值
 [s,section_property]=getSectionProperty(imb,row_property,row);
 func_showDivisiveImg(img,section_property,'rectangle');%显示段切割
 %% 获得每一行水平方向的投影,保存到rows_hor_projection
@@ -107,14 +108,34 @@ if(h>ONE_ROW_HEIGHT*1.5)
 end;
 %从行的连续性判断todo
 %% 统计样本,计算出基本参数的值
-function func_statisticalParameter()
+function func_statisticalParameter(rp)
 %todo 先使用固定值替代
 global ONE_CHAR_WIDTH;% 统计参数 一个中文字符的标准宽
 global ONE_TAB_WIDTH;% 统计参数 一个首行缩进的标准宽
 global ONE_ROW_HEIGHT;% 统计参数 一行的标准高
+global rows_hor_projection;%每一行的水平投影
+%page.jpg
 ONE_CHAR_WIDTH = 23;
 ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*3.5);
 ONE_ROW_HEIGHT=32;
+%test
+% ONE_CHAR_WIDTH = 80;
+% ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*3.5);
+% ONE_ROW_HEIGHT=100;
+% 中间三分之一求平均值法
+% ONE_ROW_HEIGHT
+row = size(rp,1);
+tmp=zeros(1,row);
+tmp =rp(:,2)-rp(:,1)-1;
+ONE_ROW_HEIGHT = round(func_getStaticAVG(tmp));
+% ONE_CHAR_WIDTH
+i = fin
+%% 求一个数组中间三分之一上下取整区间的平均值
+function[result]=func_getStaticAVG(tmp)
+n = length(tmp);
+left = floor(n/3);right = ceil(n/3*2);
+tmp =sort(tmp);
+result = sum(tmp(left:right))/(right-left+1);
 %% 查找合适的页面宽
 function func_getRealWidth(imb)
 % @输出
@@ -141,7 +162,6 @@ function  func_showDivisiveImg(img,properties,type)
 global LX;
 global RX;
 global PWIDTH;
-figure;imshow(img);set(gca,'position',[0,0,1,1]);
 % [M,N,O]=size(img);
 n = size(properties,1);
 switch type
@@ -210,7 +230,7 @@ end
 function[im2]= func_imgToBin(img)
 img            = 255 - img;          % 针对白纸黑字的情况
 im2            = double(img);
-trd            = 1.3 * mean(im2(:)); % 固定阈值
+trd            = mean(im2(:)); % 固定阈值
 im2(im2 > trd) = 255;                % 阈值分割
 im2(im2 <=trd) = 0;
 im2=uint8(im2);
