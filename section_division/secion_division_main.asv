@@ -116,9 +116,9 @@ global ONE_ROW_HEIGHT;% 统计参数 一行的标准高
 global rows_hor_projection;%每一行的水平投影
 global PWIDTH;% 页面宽
 %page.jpg
-% ONE_CHAR_WIDTH = 23;
-% ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*3.5);
-% ONE_ROW_HEIGHT=32;
+ONE_CHAR_WIDTH = 23;
+ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*3.5);
+ONE_ROW_HEIGHT=32;
 %test
 % ONE_CHAR_WIDTH = 80;
 % ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*3.5);
@@ -136,24 +136,22 @@ hor = rows_hor_projection{i};
 i = 1;
 star=0;
 ed=0;
-num=1;
+num=0;
 tmp = zeros(1,200);%记录字符宽
 while(i<PWIDTH)
     if(hor(i)~=0)
+        num=num+1;
         star=i;
         while(hor(i)~=0)
             i=i+1;
         end
         ed = i;
         tmp(num)=ed-star;
-         num=num+1;
         continue;
     end
     i=i+1;
 end
-tmp(num:end)=[];
-ONE_CHAR_WIDTH = ceil(func_getStaticAVG(tmp));
-ONE_TAB_WIDTH =  round(ONE_CHAR_WIDTH*2.6);
+ONE_CHAR_WIDTH = func_
 %% 求一个数组中间三分之一上下取整区间的平均值
 function[result]=func_getStaticAVG(tmp)
 n = length(tmp);
