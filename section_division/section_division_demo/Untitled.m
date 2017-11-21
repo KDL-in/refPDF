@@ -19,9 +19,12 @@
 % a =1:5;
 % a(2:4)=[];
 % a
-img = [1 2 3;4 5 6];
-% x =1:2;
-x=1:2;
-img=img'
-tmp =sum(img(:,:))
-
+% img = [1 2 3;4 5 6];
+% % x =1:2;
+% x=1:2;
+% img=img'
+% tmp =sum(img(:,:))
+% s = strcat('p',2)
+img = imread('page.jpg');
+imb = imresize(img,0.4);
+imshow(imb)
