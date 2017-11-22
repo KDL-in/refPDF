@@ -7,7 +7,7 @@ clear all;
 %% 以下是全局参数说明,参数为结构体,包含各种子参数
 global PAGE;
 % PAGE 实际包含内容的页面信息, 左右边界以及实际内容宽度,包含
-%--LX 实际内容左边界
+%--LX 实际内容左边界tag
 %--LY 实际内容右边界
 %--WIDTH 实际内容的宽度
 global PARA;
@@ -51,14 +51,14 @@ imgs.g =imgs.o;
 if (size(imgs.o,3) ~= 1)
     imgs.g = func_imgToGray(imgs.o);%转灰度图
 end
-figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
 imgs.b = func_imgToBin(imgs.g);%二值化
-geetContentSize(imgs.b);%计算页面宽度,左右边界
+figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
+getInteretingContentSize();%计算感兴趣区域页面宽度,左右边界
 func_statisticalParameter();%基本参数统计求均值
 initProperties();% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 padding = 10;
 func_sectionReflow(1000,1000);%基于段切分的重排
-figure;imshow(imgs.output);
+% figure;imshow(imgs.output);
 %% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 function initProperties()
 global imgs;
@@ -93,7 +93,7 @@ f=w/PAGE.WIDTH;
 s = size(properties.section,1);
 for i = 1:s
     if(h+padding < x+properties.section(i,4)*f)%另起一页
-        figure;imshow(imgs.output);title('section reflow');
+%         figure;imshow(imgs.output);title('section reflow');
         func_save(imgs.output,'output',strcat('p',num2str(p)),'jpg');
         p= p+1;
         imgs.output = uint8(zeros(oh,ow));
@@ -135,7 +135,7 @@ imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),f);
 switch type
     case 'section'
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
-        x = x+PARA.ROW_SPACING*f;
+        x = round(x+PARA.ROW_SPACING*f);
         [x,y] = func_newline(x,y,sh);
     case 'char'%todo
 end
@@ -158,7 +158,7 @@ for i = 1:row
 end
 %% 根据左上角坐标和长宽取出图像的一部分
 function[imp]=func_getThePartOf(x,y,w,h)
-% 输入
+% 输入 todo x y逻辑上不太对,对于使用者来说,是图片xy,内部才是矩阵xy
 % xy 左上角坐标
 % wh 宽和高
 global imgs;
@@ -226,9 +226,13 @@ properties.section(s:end,:)=[];
 % s=s-1;
 %% 计算行行首空格数
 function [head_blank,tail_blank]=trim(row)
+%todo debug hor取的是截取后的,而hb访问的却是全图的因此会出错
 global projection;%每一行的水平投影
+global PAGE;
 hor = projection.allRows{row};
 head_blank =1;
+showRow(1);
+
 while(hor(head_blank)==0)
     head_blank=1+head_blank;
 end
@@ -237,6 +241,15 @@ while(hor(i)==0)
     i=i-1;
 end
 tail_blank=i;
+%% 显示某一行,debug用
+function showRow(i)
+global properties;
+global imgs;
+x =1;
+y= properties.row(i,1)+1;
+h = properties.row(i,2)-properties.row(i,1)-1;
+w=size(imgs.b,2);
+figure;imshow(func_getThePartOf(y,x,w,h));
 %% 判断某一行是否为图片
 function [flag] =isImgSection(idx,x,y,w,h)
 global PARA;
@@ -335,32 +348,43 @@ left = floor(n/3);right = ceil(n/3*2);
 tmp =sort(tmp);
 result = mean(tmp(left:right));
 %% 计算正文内容的宽高
-function geetContentSize(imb)
-% @输入
+function getInteretingContentSize()
 % 用户截取的感兴趣区域图像部分(todo)
 global PAGE;
-%  宽度
-hor = func_projectTo(imb,'horizontal');
+global imgs;
+pos = [1,1,size(imgs.b,2),size(imgs.b,1)];
+h=imrect;%鼠标变成十字，用来选取感兴趣区域
+%点击ok之后继续todo gui的时候要修改
+pos=getPosition(h);%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
+pos=uint16(pos);%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
+%注意上面是图像的x,y, 下面矩阵要用应该交换一下
+
+ %  宽度tag
+hor = func_projectTo(imgs.b,'horizontal');
 % figure;plot(1:length(hor),hor);title('垂直方向像素');
-PAGE.LX=1;
-PAGE.RX=length(hor);
+PAGE.LX=pos(1);
+PAGE.RX=pos(1)+pos(3)-1;
 while(hor(PAGE.LX)==0) 
     PAGE.LX=PAGE.LX+1;
 end;
 while(hor(PAGE.RX)==0) 
     PAGE.RX=PAGE.RX-1;
 end;
+PAGE.LX = PAGE.LX-20;%上下左右20px的安全区域
+PAGE.RX = PAGE.RX+20;%上下左右20px的安全区域
 PAGE.WIDTH=PAGE.RX-PAGE.LX-1;
 % 高度
-ver = func_projectTo(imb,'vertical');
-PAGE.UY=1;
-PAGE.DY=length(ver);
+ver = func_projectTo(imgs.b,'vertical');
+PAGE.UY=pos(2);
+PAGE.DY=pos(2)+pos(4)-1;
 while(ver(PAGE.UY)==0) 
     PAGE.UY=PAGE.UY+1;
 end;
 while(ver(PAGE.DY)==0) 
     PAGE.DY=PAGE.DY-1;
 end;
+PAGE.UY = PAGE.UY-20;%上下左右20px的安全区域
+PAGE.DY = PAGE.DY+20;%上下左右20px的安全区域
 PAGE.HEIGHT=PAGE.DY-PAGE.UY-1;
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)

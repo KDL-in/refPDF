@@ -1,30 +1,11 @@
-% section.section_property =[50,60];
-% section.isP = 1;
-% section.isT = 0;
-% section.includedRows=[10,13];
-% section;
-% s(1)=struct('number','9901','name','Xiao li','score','90','grade','A');
-% s(2)=struct('number','9902','name','Xiao zhou','score','83','grade','B');
-% s(3)=struct('number','9903','name','Xiao xu','score','71','grade','B');
-% s(4)=struct('number','9904','name','Xiao liao','score','82','grade','A');
-% s(5)=struct('number','9905','name','Li na','score','64','grade','A');
-% tmp =s(:).number;
-% a=struct('ID', {1,2,3,4,5,6,7,8,9,10});
-% a(1:2:9);
-% sp = zeros(23,6)
-% sp(1,:)=[1,2,3,4,5,6]
-% x = 1:5;
-% arr=7:11;
-% sum(arr(x))
-% a =1:5;
-% a(2:4)=[];
-% a
-% img = [1 2 3;4 5 6];
-% % x =1:2;
-% x=1:2;
-% img=img'
-% tmp =sum(img(:,:))
-% s = strcat('p',2)
-img = imread('page.jpg');
-imb = imresize(img,0.4);
-imshow(imb)
+I=imread('page.jpg');
+imshow(I);
+%画图后：
+h=imrect;%鼠标变成十字，用来选取感兴趣区域
+%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
+pos=getPosition(h);
+%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
+%拷贝选取图片
+imCp = imcrop( I, pos );
+figure(2)
+imshow(imCp);
