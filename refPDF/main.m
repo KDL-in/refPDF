@@ -1,6 +1,6 @@
 
 %% 段落划分
-function secion_division_main()
+function main()
 clc;
 close all;
 clear all;
@@ -16,6 +16,7 @@ global PARA;
 %--ONE_TAB_WIDTH      一个首行缩进的标准宽
 %--ONE_ROW_HEIGHT   一行的标准高
 %--ROW_SPACING  行间隔
+%--TFTOOL 一个3.5个字符宽的数组, 数组全为1, 检测连续像素点用
 global projection;
 % projection 垂直方向和水平方向的投影,包含
 %--allRows 每一行的水平投影
@@ -187,7 +188,7 @@ for i = 1:row
 %          s
 %          figure;imshow(func_getThePartOf(y,x,w,h));
 %      end
-    if(isImgSection(properties.row(i,:))==1)%是否为图片段
+    if(isImgSection(i,x,y,w,h)==1)%是否为图片段
         properties.section(s,:)=[x,y,w,h,head_blank/PAGE.WIDTH,1,i,i];%新建一段
         s=s+1;
     else%非图片段
@@ -198,8 +199,8 @@ for i = 1:row
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(s==1 || properties.section(s-1,4)==1)%上一段是否为图片
-                properties.section(i, :)=[x,y,w,h, 0, 0, i, i];
+            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片
+                properties.section(s, :)=[x,y,w,h, head_blank/PAGE.WIDTH, 0, i, i];
                 s=s+1;
             else%非图片,合并
                 %宽度的更新
@@ -234,16 +235,20 @@ while(hor(i)==0)
 end
 tail_blank=i;
 %% 判断某一行是否为图片
-function [flag] =isImgSection(curRow)
+function [flag] =isImgSection(idx,x,y,w,h)
 global PARA;
-up = curRow(1);
-bottom=curRow(2);
+global projection;
 flag = 0;
+hor = projection.allRows{idx};
 %从行的高度判断
-h = bottom-up-1;
 if(h>PARA.ONE_ROW_HEIGHT*1.5) 
     flag = 1;
-end;
+% else
+%     figure;imshow(func_getThePartOf(x,y,w,h));
+%     hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+%     tmp =and(hor,PARA.TFTOOL)%cur
+%     tmp
+end
 %从行的连续性判断todo
 %% 统计样本,计算出基本参数的值
 function func_statisticalParameter()
@@ -283,9 +288,12 @@ rp(row+1:end,:)=[];
 tmp =rp(:,2)-rp(:,1)-1;
 PARA.ONE_ROW_HEIGHT = round(func_getStatistcalAVG(tmp));
 % PARA.ONE_CHAR_WIDTH
+median(tmp)
 idx = find(tmp==median(tmp));
 i = idx(ceil(length(idx)/2));
+% figure;imshow(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)))
 hor = func_projectTo(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)),'horizontal');%获得这一行的水平投影
+% figure;plot(1:length(hor),hor);title('垂直方向像素');
 i = 1;
 num=1;
 tmp = zeros(1,200);%记录字符宽
@@ -313,14 +321,15 @@ for i = 2:row
     tmp(i-1)=rp(i,1)-rp(i-1,2);
 end
 PARA.ROW_SPACEING = floor(func_getStatistcalAVG(tmp));
-
+% TFTOOL 检测小工具
+PARA.TFTOOL = uint8(ones(1,floor(PARA.ONE_CHAR_WIDTH*3.5)));
 %% 求一个数组中间三分之一上下取整区间的平均值
 function[result]=func_getStatistcalAVG(tmp)
 n = length(tmp);
 left = floor(n/3);right = ceil(n/3*2);
 tmp =sort(tmp);
 result = mean(tmp(left:right));
-%% 计算传入图像的宽高
+%% 计算正文内容的宽高
 function geetContentSize(imb)
 % @输入
 % 用户截取的感兴趣区域图像部分(todo)
@@ -363,9 +372,22 @@ switch type
         line([PAGE.LX,PAGE.RX],[properties(:,2),properties(:,2)]);
     case 'rectangle'
         %rectangle('Position',temp,'LineWidth',2,'LineStyle','-','edgecolor','b')
-        for i=1:n
-            position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
-            rectangle('Position',position,'edgecolor','g');
+        if(size(properties,2)==8)%段落
+            for i=1:n
+                color ='g';%cur
+                if(properties(i,6)~=0)
+                   color = 'r';
+                elseif(properties(i,5)~=0)
+                   color = 'b';
+                end
+                position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
+                rectangle('Position',position,'edgecolor',color);
+            end
+        else
+             for i=1:n%字符
+                position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
+                rectangle('Position',position,'edgecolor','g');
+            end
         end
 end
 %% 从垂直投影中获得行信息
@@ -374,7 +396,6 @@ function getRowProperty()
 %                      它的结构为[up, buttom], 即第x行, 上边界为up,下边界为buttom
 global projection;
 global properties;
-global PARA;
 row = 0;
 len = size(projection.ver,1);
 properties.row=zeros(len,2);
@@ -391,9 +412,9 @@ while (i<=len)
     i=i+1;
 end
 properties.row(row+1:end,:)=[];
-tmp =properties.row(:,2)-properties.row(:,1);
-idx = find(tmp<7);%tag去躁点或者定筛选值???
-properties.row(idx,:)=[];
+% tmp =properties.row(:,2)-properties.row(:,1);
+% idx = tmp<7;去躁点或者定筛选值???无需再考虑
+% properties.row(idx,:)=[];
 %% 水平方向或垂直方向的投影
 function[arr]=func_projectTo(img,type)
 % @输入
@@ -415,10 +436,11 @@ if (size(img,3) ~= 1)                % 要求输入图像为单通道灰度图像
 end
 %% 二值化图像
 function[im2]= func_imgToBin(img)
-img            = 255 - img;          % 针对白纸黑字的情况
+img            = 255 - img;          
 im2            = double(img);
-trd            = mean(im2(:)); % 固定阈值
-im2(im2 > trd) = 255;                % 阈值分割
+%计算trd, 这种trd计算方式,对pdf文档神效
+trd            = mean(im2(im2>0)); 
+im2(im2 > trd) = 255;                
 im2(im2 <=trd) = 0;
 im2=uint8(im2);
     
