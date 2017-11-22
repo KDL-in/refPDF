@@ -6,9 +6,11 @@ close all;
 clear all;
 %% 以下是全局参数说明,参数为结构体,包含各种子参数
 global PAGE;
-% PAGE 实际包含内容的页面信息, 左右边界以及实际内容宽度,包含
-%--LX 实际内容左边界tag
-%--LY 实际内容右边界
+% PAGE 感兴趣区域的实际有内容区域的信息, 左右边界以及宽度,包含
+%--LX 左边界
+%--LX 右边界
+%--UY 上边界
+%--DY 下边界
 %--WIDTH 实际内容的宽度
 global PARA;
 % PARA 统计参数,经过统计得来的一些页面相关参数,包含
@@ -43,10 +45,10 @@ global properties;
 global padding;
 
 
-imgs.o = imread('page.jpg');
+% imgs.o = imread('page.jpg');
 % imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
 % imgs.o = imread('test/ita1 (3).jpg');
-% imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
+imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
 imgs.g =imgs.o;
 if (size(imgs.o,3) ~= 1)
     imgs.g = func_imgToGray(imgs.o);%转灰度图
@@ -54,7 +56,7 @@ end
 imgs.b = func_imgToBin(imgs.g);%二值化
 figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
 getInteretingContentSize();%计算感兴趣区域页面宽度,左右边界
-%划出感兴趣区域后, imgs中更新tag
+%划出感兴趣区域后, imgs中更新
 imgs.b = func_getThePartOf('binary',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
 imgs.g = func_getThePartOf('gray',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
 imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
@@ -195,9 +197,9 @@ s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
 for i = 1:row     
-%     if(i == 31)
-%          showRow(30);
-% %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
+%     if(i == 3)
+%          showRow(i);
+% %          figure;imshow(func_getThePartOf('binary',x,y,w,h));tag
 %      end
     [head_blank,tail_blank] = trim(i);%计算开头的空白长度
     x = head_blank+1;
@@ -277,7 +279,7 @@ if(h>PARA.ONE_ROW_HEIGHT*1.5)
     flag = 1;
 else
 %     figure;imshow(func_getThePartOf('binary',x,y,w,h));
-    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);%tag
     tmp =and(hor,PARA.TFTOOL);
     blank = find(tmp==0);
     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
@@ -387,8 +389,8 @@ while(hor(PAGE.RX)==0)
     PAGE.RX=PAGE.RX-1;
 end;
 PAGE.RX=PAGE.RX+1;
-PAGE.LX = PAGE.LX-20;%上下左右20px的安全区域
-PAGE.RX = PAGE.RX+20;%上下左右20px的安全区域
+PAGE.LX = PAGE.LX-10;%上下左右20px的安全区域
+PAGE.RX = PAGE.RX+10;%上下左右20px的安全区域
 PAGE.WIDTH=double(PAGE.RX-PAGE.LX);
 % 高度
 ver = func_projectTo(imgs.b,'vertical');
@@ -400,8 +402,8 @@ end;
 while(ver(PAGE.DY)==0) 
     PAGE.DY=PAGE.DY-1;
 end;
-PAGE.UY = PAGE.UY-20;%上下左右20px的安全区域
-PAGE.DY = PAGE.DY+20;%上下左右20px的安全区域
+PAGE.UY = PAGE.UY-10;%上下左右20px的安全区域
+PAGE.DY = PAGE.DY+10;%上下左右20px的安全区域
 PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
