@@ -44,7 +44,9 @@ global padding;
 
 
 % imgs.o = imread('page.jpg');
-imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
+imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
+% imgs.o = imread('test/ita1 (1).jpg');
+% imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
 imgs.g =imgs.o;
 if (size(imgs.o,3) ~= 1)
     imgs.g = func_imgToGray(imgs.o);%转灰度图
@@ -140,7 +142,7 @@ end
 %% 根据传入高度换行返回新的坐标
 function[x,y]=func_newline(x,y,height)
 global padding;
-y=padding+1;%todo y应该等于设置的内边距
+y=padding+1;
 x=x+height;
 %% 获得每一行水平方向的投影,保存到projection.allRows
 function getRowsProjection()
@@ -160,6 +162,7 @@ function[imp]=func_getThePartOf(x,y,w,h)
 % xy 左上角坐标
 % wh 宽和高
 global imgs;
+x=uint64(x);y=uint64(y);w=uint64(w);h=uint64(h);%matlab中似乎没有自动取最大变量类型,预防万一
 imp = imgs.b(x:x+h-1,y:y+w-1);
 %% 把行中合并成段,图片自成一段
 function getSectionProperty()
@@ -184,10 +187,10 @@ for i = 1:row
     y= properties.row(i,1)+1;
     h = properties.row(i,2)-properties.row(i,1)-1;
     w=tail_blank-head_blank+1;
-%      if(i > 21)
-%          s
-%          figure;imshow(func_getThePartOf(y,x,w,h));
-%      end
+     if(i == 6)
+         s
+         figure;imshow(func_getThePartOf(y,x,w,h));
+     end
     if(isImgSection(i,x,y,w,h)==1)%是否为图片段
         properties.section(s,:)=[x,y,w,h,head_blank/PAGE.WIDTH,1,i,i];%新建一段
         s=s+1;
@@ -199,8 +202,8 @@ for i = 1:row
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(s==1 || properties.section(s-1,4)==1)%上一段是否为图片
-                properties.section(i, :)=[x,y,w,h, 0, 0, i, i];
+            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片
+                properties.section(s, :)=[x,y,w,h, head_blank/PAGE.WIDTH, 0, i, i];
                 s=s+1;
             else%非图片,合并
                 %宽度的更新
@@ -243,13 +246,16 @@ hor = projection.allRows{idx};
 %从行的高度判断
 if(h>PARA.ONE_ROW_HEIGHT*1.5) 
     flag = 1;
-% else
-%     figure;imshow(func_getThePartOf(x,y,w,h));
-%     hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
-%     tmp =and(hor,PARA.TFTOOL)%cur
-%     tmp
+else
+%     figure;imshow(func_getThePartOf(y,x,w,h));
+    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+    tmp =and(hor,PARA.TFTOOL);%cur
+    blank = find(tmp==0);
+    if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
+        flag=1;
+    end
 end
-%从行的连续性判断todo
+
 %% 统计样本,计算出基本参数的值
 function func_statisticalParameter()
 %todo 
@@ -288,10 +294,9 @@ rp(row+1:end,:)=[];
 tmp =rp(:,2)-rp(:,1)-1;
 PARA.ONE_ROW_HEIGHT = round(func_getStatistcalAVG(tmp));
 % PARA.ONE_CHAR_WIDTH
-median(tmp)
-idx = find(tmp==median(tmp));
+idx = find(tmp==uint32(median(tmp)));
 i = idx(ceil(length(idx)/2));
-% figure;imshow(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)))
+% figure;imshow(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)));
 hor = func_projectTo(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)),'horizontal');%获得这一行的水平投影
 % figure;plot(1:length(hor),hor);title('垂直方向像素');
 i = 1;
@@ -376,9 +381,9 @@ switch type
             for i=1:n
                 color ='g';%cur
                 if(properties(i,6)~=0)
-                   color = 'b';
+                   color = 'r';
                 elseif(properties(i,5)~=0)
-                   color = ''
+                   color = 'b';
                 end
                 position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
                 rectangle('Position',position,'edgecolor',color);
@@ -412,9 +417,9 @@ while (i<=len)
     i=i+1;
 end
 properties.row(row+1:end,:)=[];
-tmp =properties.row(:,2)-properties.row(:,1);
-idx = tmp<7;%tag去躁点或者定筛选值???
-properties.row(idx,:)=[];
+% tmp =properties.row(:,2)-properties.row(:,1);
+% idx = tmp<7;去躁点或者定筛选值???无需再考虑
+% properties.row(idx,:)=[];
 %% 水平方向或垂直方向的投影
 function[arr]=func_projectTo(img,type)
 % @输入
@@ -439,7 +444,7 @@ function[im2]= func_imgToBin(img)
 img            = 255 - img;          
 im2            = double(img);
 %计算trd, 这种trd计算方式,对pdf文档神效
-trd            = mean(im2(im2>0)); 
+trd            = 0.5*mean(im2(im2>0)); 
 im2(im2 > trd) = 255;                
 im2(im2 <=trd) = 0;
 im2=uint8(im2);

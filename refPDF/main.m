@@ -44,7 +44,9 @@ global padding;
 
 
 % imgs.o = imread('page.jpg');
-imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
+% imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
+imgs.o = imread('test/ita1 (3).jpg');
+% imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
 imgs.g =imgs.o;
 if (size(imgs.o,3) ~= 1)
     imgs.g = func_imgToGray(imgs.o);%转灰度图
@@ -133,14 +135,14 @@ imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),f);
 switch type
     case 'section'
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
-        x = x+PARA.ROW_SPACEING*f;
+        x = x+PARA.ROW_SPACING*f;
         [x,y] = func_newline(x,y,sh);
     case 'char'%todo
 end
 %% 根据传入高度换行返回新的坐标
 function[x,y]=func_newline(x,y,height)
 global padding;
-y=padding+1;%todo y应该等于设置的内边距
+y=padding+1;
 x=x+height;
 %% 获得每一行水平方向的投影,保存到projection.allRows
 function getRowsProjection()
@@ -160,6 +162,7 @@ function[imp]=func_getThePartOf(x,y,w,h)
 % xy 左上角坐标
 % wh 宽和高
 global imgs;
+x=uint64(x);y=uint64(y);w=uint64(w);h=uint64(h);%matlab中似乎没有自动取最大变量类型,预防万一
 imp = imgs.b(x:x+h-1,y:y+w-1);
 %% 把行中合并成段,图片自成一段
 function getSectionProperty()
@@ -184,7 +187,7 @@ for i = 1:row
     y= properties.row(i,1)+1;
     h = properties.row(i,2)-properties.row(i,1)-1;
     w=tail_blank-head_blank+1;
-%      if(i > 21)
+%      if(i == 6)
 %          s
 %          figure;imshow(func_getThePartOf(y,x,w,h));
 %      end
@@ -243,16 +246,19 @@ hor = projection.allRows{idx};
 %从行的高度判断
 if(h>PARA.ONE_ROW_HEIGHT*1.5) 
     flag = 1;
-% else
-%     figure;imshow(func_getThePartOf(x,y,w,h));
-%     hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
-%     tmp =and(hor,PARA.TFTOOL)%cur
-%     tmp
+else
+%     figure;imshow(func_getThePartOf(y,x,w,h));
+    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+    tmp =and(hor,PARA.TFTOOL);%cur
+    blank = find(tmp==0);
+    if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
+        flag=1;
+    end
 end
-%从行的连续性判断todo
+
 %% 统计样本,计算出基本参数的值
 function func_statisticalParameter()
-%todo 
+%todo 选择样本之后固定这些参数
 global PARA;%统计参数
 global PAGE;
 global imgs;
@@ -288,12 +294,11 @@ rp(row+1:end,:)=[];
 tmp =rp(:,2)-rp(:,1)-1;
 PARA.ONE_ROW_HEIGHT = round(func_getStatistcalAVG(tmp));
 % PARA.ONE_CHAR_WIDTH
-median(tmp)
-idx = find(tmp==median(tmp));
+idx = find(tmp==uint32(median(tmp)));
 i = idx(ceil(length(idx)/2));
-% figure;imshow(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)))
+%%% figure;imshow(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)));
 hor = func_projectTo(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)),'horizontal');%获得这一行的水平投影
-% figure;plot(1:length(hor),hor);title('垂直方向像素');
+%%% figure;plot(1:length(hor),hor);title('垂直方向像素');
 i = 1;
 num=1;
 tmp = zeros(1,200);%记录字符宽
@@ -314,13 +319,13 @@ tmp(num:end)=[];
 PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
 %PARA.ONE_TAB_WIDTH
 PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2.6);
-%PARA.ROW_properties.sectionACING
+%PARA.ROW_properties.ROW_SPACING
 row = size(rp,1);
 tmp = zeros(1,row-1);
 for i = 2:row
     tmp(i-1)=rp(i,1)-rp(i-1,2);
 end
-PARA.ROW_SPACEING = floor(func_getStatistcalAVG(tmp));
+PARA.ROW_SPACING = floor(func_getStatistcalAVG(tmp));
 % TFTOOL 检测小工具
 PARA.TFTOOL = uint8(ones(1,floor(PARA.ONE_CHAR_WIDTH*3.5)));
 %% 求一个数组中间三分之一上下取整区间的平均值
@@ -439,7 +444,7 @@ function[im2]= func_imgToBin(img)
 img            = 255 - img;          
 im2            = double(img);
 %计算trd, 这种trd计算方式,对pdf文档神效
-trd            = mean(im2(im2>0)); 
+trd            = 0.5*mean(im2(im2>0)); 
 im2(im2 > trd) = 255;                
 im2(im2 <=trd) = 0;
 im2=uint8(im2);
