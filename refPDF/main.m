@@ -43,9 +43,9 @@ global properties;
 global padding;
 
 
-% imgs.o = imread('page.jpg');
+imgs.o = imread('page.jpg');
 % imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
-imgs.o = imread('test/ita1 (3).jpg');
+% imgs.o = imread('test/ita1 (3).jpg');
 % imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
 imgs.g =imgs.o;
 if (size(imgs.o,3) ~= 1)
@@ -54,18 +54,25 @@ end
 imgs.b = func_imgToBin(imgs.g);%二值化
 figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
 getInteretingContentSize();%计算感兴趣区域页面宽度,左右边界
+%划出感兴趣区域后, imgs中更新tag
+imgs.b = func_getThePartOf('binary',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
+imgs.g = func_getThePartOf('gray',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
+imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
 func_statisticalParameter();%基本参数统计求均值
 initProperties();% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 padding = 10;
-func_sectionReflow(1000,1000);%基于段切分的重排
-% figure;imshow(imgs.output);
+func_sectionReflow(2000,1000);%基于段切分的重排
+figure;imshow(imgs.output);
 %% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 function initProperties()
 global imgs;
+global PAGE;
 global properties;
 global projection;
+% figure;imshow(imgs.b);
+% figure;imshow(func_getThePartOf(PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT));
 projection.ver = func_projectTo(imgs.b,'vercial');%投影到垂直方向
-% figure;plot(ver,1:M);title('垂直方向像素');set(gca,'ydir','reverse');
+% figure;plot(projection.ver,1:length(projection.ver));title('垂直方向像素');set(gca,'ydir','reverse');
 getRowProperty();
 % func_showDivisiveImg(properties.row,'line');%显示行切割
 getRowsProjection();%获得每一行水平方向的投影,保存到projection.allRows
@@ -89,7 +96,7 @@ x = padding+1;
 y= padding+1;
 w = w -2*padding;
 h = h -2*padding;
-f=w/PAGE.WIDTH;
+f=w/double(PAGE.WIDTH);
 s = size(properties.section,1);
 for i = 1:s
     if(h+padding < x+properties.section(i,4)*f)%另起一页
@@ -153,17 +160,23 @@ row = size(properties.row,1);
 projection.allRows = cell(1,row);
 for i = 1:row
     h = properties.row(i,2)-properties.row(i,1)-1;
-    imp = func_getThePartOf(properties.row(i,1)+1,PAGE.LX+1,PAGE.WIDTH,h);
+    imp = func_getThePartOf('binary',1,properties.row(i,1)+1,PAGE.WIDTH,h);
     projection.allRows{i}=func_projectTo(imp,'horizontal');
 end
 %% 根据左上角坐标和长宽取出图像的一部分
-function[imp]=func_getThePartOf(x,y,w,h)
-% 输入 todo x y逻辑上不太对,对于使用者来说,是图片xy,内部才是矩阵xy
+function[imp]=func_getThePartOf(type,x,y,w,h)
+% 输入
+% type 灰度或者二值图
 % xy 左上角坐标
 % wh 宽和高
 global imgs;
 x=uint64(x);y=uint64(y);w=uint64(w);h=uint64(h);%matlab中似乎没有自动取最大变量类型,预防万一
-imp = imgs.b(x:x+h-1,y:y+w-1);
+switch type
+    case 'gray'
+        imp = imgs.g(y:y+h-1,x:x+w-1);
+    case 'binary'
+        imp = imgs.b(y:y+h-1,x:x+w-1);
+end
 %% 把行中合并成段,图片自成一段
 function getSectionProperty()
 % s段落数
@@ -181,16 +194,16 @@ row =size(properties.row,1);
 s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
-for i = 1:row
+for i = 1:row     
+%     if(i == 31)
+%          showRow(30);
+% %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
+%      end
     [head_blank,tail_blank] = trim(i);%计算开头的空白长度
-    x = PAGE.LX+head_blank+1;
+    x = head_blank+1;
     y= properties.row(i,1)+1;
     h = properties.row(i,2)-properties.row(i,1)-1;
-    w=tail_blank-head_blank+1;
-%      if(i == 6)
-%          s
-%          figure;imshow(func_getThePartOf(y,x,w,h));
-%      end
+    w=tail_blank-head_blank-1;
     if(isImgSection(i,x,y,w,h)==1)%是否为图片段
         properties.section(s,:)=[x,y,w,h,head_blank/PAGE.WIDTH,1,i,i];%新建一段
         s=s+1;
@@ -208,7 +221,7 @@ for i = 1:row
             else%非图片,合并
                 %宽度的更新
                 if(last_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
-                    properties.section(s-1,3)=properties.section(s-1,3)+last_blank;
+                    properties.section(s-1,3)=properties.section(s-1,3)+last_blank-head_blank;
                 end
                 if(w>properties.section(s-1,3))%更新成最大的
                     properties.section(s-1,3)=w;
@@ -231,16 +244,19 @@ global projection;%每一行的水平投影
 global PAGE;
 hor = projection.allRows{row};
 head_blank =1;
-showRow(1);
-
+% showRow(1);
+% if(row==31)%tag
+%     row
+% end
 while(hor(head_blank)==0)
     head_blank=1+head_blank;
 end
+head_blank = head_blank-1;
 i = size(hor,2);
 while(hor(i)==0)
     i=i-1;
 end
-tail_blank=i;
+tail_blank=i+1;
 %% 显示某一行,debug用
 function showRow(i)
 global properties;
@@ -249,7 +265,7 @@ x =1;
 y= properties.row(i,1)+1;
 h = properties.row(i,2)-properties.row(i,1)-1;
 w=size(imgs.b,2);
-figure;imshow(func_getThePartOf(y,x,w,h));
+figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %% 判断某一行是否为图片
 function [flag] =isImgSection(idx,x,y,w,h)
 global PARA;
@@ -260,9 +276,9 @@ hor = projection.allRows{idx};
 if(h>PARA.ONE_ROW_HEIGHT*1.5) 
     flag = 1;
 else
-%     figure;imshow(func_getThePartOf(y,x,w,h));
+%     figure;imshow(func_getThePartOf('binary',x,y,w,h));
     hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
-    tmp =and(hor,PARA.TFTOOL);%cur
+    tmp =and(hor,PARA.TFTOOL);
     blank = find(tmp==0);
     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
         flag=1;
@@ -309,8 +325,8 @@ PARA.ONE_ROW_HEIGHT = round(func_getStatistcalAVG(tmp));
 % PARA.ONE_CHAR_WIDTH
 idx = find(tmp==uint32(median(tmp)));
 i = idx(ceil(length(idx)/2));
-%%% figure;imshow(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)));
-hor = func_projectTo(func_getThePartOf(rp(i,1)+1,PAGE.LX,PAGE.WIDTH,tmp(i)),'horizontal');%获得这一行的水平投影
+% figure;imshow(func_getThePartOf('binary',PAGE.LX,rp(i,1)+1,PAGE.WIDTH,tmp(i)));
+hor = func_projectTo(func_getThePartOf('binary',1,rp(i,1)+1,PAGE.WIDTH,tmp(i)),'horizontal');%获得这一行的水平投影
 %%% figure;plot(1:length(hor),hor);title('垂直方向像素');
 i = 1;
 num=1;
@@ -359,7 +375,7 @@ pos=getPosition(h);%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
 pos=uint16(pos);%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
 %注意上面是图像的x,y, 下面矩阵要用应该交换一下
 
- %  宽度tag
+ %  宽度
 hor = func_projectTo(imgs.b,'horizontal');
 % figure;plot(1:length(hor),hor);title('垂直方向像素');
 PAGE.LX=pos(1);
@@ -370,9 +386,10 @@ end;
 while(hor(PAGE.RX)==0) 
     PAGE.RX=PAGE.RX-1;
 end;
+PAGE.RX=PAGE.RX+1;
 PAGE.LX = PAGE.LX-20;%上下左右20px的安全区域
 PAGE.RX = PAGE.RX+20;%上下左右20px的安全区域
-PAGE.WIDTH=PAGE.RX-PAGE.LX-1;
+PAGE.WIDTH=double(PAGE.RX-PAGE.LX);
 % 高度
 ver = func_projectTo(imgs.b,'vertical');
 PAGE.UY=pos(2);
@@ -385,7 +402,7 @@ while(ver(PAGE.DY)==0)
 end;
 PAGE.UY = PAGE.UY-20;%上下左右20px的安全区域
 PAGE.DY = PAGE.DY+20;%上下左右20px的安全区域
-PAGE.HEIGHT=PAGE.DY-PAGE.UY-1;
+PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
 % 输入
@@ -403,7 +420,7 @@ switch type
         %rectangle('Position',temp,'LineWidth',2,'LineStyle','-','edgecolor','b')
         if(size(properties,2)==8)%段落
             for i=1:n
-                color ='g';%cur
+                color ='g';
                 if(properties(i,6)~=0)
                    color = 'r';
                 elseif(properties(i,5)~=0)
