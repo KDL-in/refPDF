@@ -18,7 +18,7 @@ global PARA;
 %--ONE_CHAR_WIDTH   一个中文字符的标准宽
 %--ONE_TAB_WIDTH      一个首行缩进的标准宽
 %--ONE_ROW_HEIGHT   一行的标准高
-%--ROW_SPACING  行间隔
+%--LINE_SPACING  行间隔
 %--TFTOOL 一个3.5个字符宽的数组, 数组全为1, 检测连续像素点用
 global projection;
 % projection 垂直方向和水平方向的投影,包含
@@ -51,14 +51,17 @@ global properties;
 %----------x,y,w,h 左上角坐标,宽高
 global CONFIG;
 % CONFIG  用户设定的参数
-%--GAP 字体间距
+%--gap 字体间距
 %--padding 新文档内边距
-%--WIDTH 新文档宽
-%--HEIGHT 新文档高
-%--Fx 缩放因子 新文档宽/原文档宽
+%--width 新文档宽
+%--height 新文档高
+%--Fy 字体放大倍数
+%--line_spacing 行距
+%--text-indent 缩进距离
+%--以上是用户设置,有默认值,以下是通过上面计算得来
 %--x 左上角x
 %--y 左上角y
-
+%--Fx 缩放因子 新文档宽/原文档宽
 imgs.o = imread('page.jpg');
 % imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
 % imgs.o = imread('test/ita1 (3).jpg');
@@ -89,7 +92,7 @@ global PAGE;
 global imgs;
 %新建图像
 s_size = size(properties.section,1);
-imgs.output = uint8(zeros(CONFIG.HEIGHT,CONFIG.WIDTH));
+imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
 imgs.output = 255-imgs.output;
 x = CONFIG.x;
 y= CONFIG.y;
@@ -101,12 +104,12 @@ for i = 1:s_size%cur
     if(T~=0)%缩进保留或是缩减两个字符
         y = floor(y+CONFIG.Fx*PAGE.WIDTH*sp(5));
     else
-        y = floor(y+PARA.ONE_TAB_WIDTH*CONFIG.Fx);
+        y = floor(y+CONFIG.text_indent);%todo 提供设置
     end
     if(sp(6)==1)%如果是图片段
-        if(CONFIG.HEIGHT-CONFIG.padding < x+sp(4)*CONFIG.Fx)%另起一页
+        if(CONFIG.height-CONFIG.padding < x+sp(4)*CONFIG.Fx)%另起一页
             %         figure;imshow(imgs.output);title('section reflow');
-            [x,y,p]=func_newPage(p);
+            [x,~,p]=func_newPage(p);
         end
         [x,y]=func_append(x,y,sp(1:4),'section');
     else
@@ -116,10 +119,11 @@ for i = 1:s_size%cur
             c_size = size(chars,1);
             for n = 1:c_size%遍历所有字符
                 %换行或换页
-                if(y+chars(n,3)*CONFIG.Fx*CONFIG.Fy > CONFIG.WIDTH-CONFIG.padding)%是否需要换行
+                if(y+chars(n,3)*CONFIG.Fx*CONFIG.Fy > CONFIG.width-CONFIG.padding)%是否需要换行
                     [x,y] = func_newline(x,y,chars(n,4)*CONFIG.Fx*CONFIG.Fy);
+                    x = ceil(x+ CONFIG.line_spacing);
                 end
-                if(CONFIG.HEIGHT-CONFIG.padding < x+chars(n,4)*CONFIG.Fx*CONFIG.Fy)%另起一页
+                if(CONFIG.height-CONFIG.padding < x+chars(n,4)*CONFIG.Fx*CONFIG.Fy)%另起一页
                     [x,y,p]=func_newPage(p);
                 end
                 %非首行是否缩进保留
@@ -131,28 +135,34 @@ for i = 1:s_size%cur
             end
         end
     end
+    % 换行, 图片换行以及段换行, 解决行距问题
     if(sp(6)==1)
         [x,y]=func_newline(x,y,sp(4)*CONFIG.Fx);
-    else
-        ewline(x,y,sp(4)*CONFIG.Fx);
+        x = floor(x+CONFIG.line_spacing*0.5);
+    else%换行换的是最后一行的高度
+        h = properties.allRows(sp(8),2)-properties.allRows(sp(8),1)-1;
+        [x,y]=func_newline(x,y,h*CONFIG.Fx*CONFIG.Fy);
+        x = ceil(x+ CONFIG.line_spacing);
     end
 end
 
 
-%% 根据用户的输入初始化 用户配置参数
+%% 初始化 用户配置参数
 function initCONFIG()
 global CONFIG;
+global PARA;
 global PAGE;
-CONFIG.GAP =2.5;
+CONFIG.gap =2.5;%todo 等待统计
 CONFIG.padding = 0;
-CONFIG.HEIGHT = PAGE.HEIGHT;
-CONFIG.WIDTH= PAGE.WIDTH;%todo以变量从界面中读取
-%指定分辨率
-w = CONFIG.WIDTH -2*CONFIG.padding;
+CONFIG.height = PAGE.HEIGHT;
+CONFIG.width= PAGE.WIDTH;
+w = CONFIG.width -2*CONFIG.padding;
 CONFIG.Fx=w/double(PAGE.WIDTH);
-CONFIG.Fy=2;
+CONFIG.Fy=1.5;%todo 默认1
 CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
 CONFIG.x = CONFIG.padding+1;
+CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
+CONFIG.text_indent = PARA.ONE_TAB_WIDTH*CONFIG.Fx*CONFIG.Fy;
 %% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 function initProperties()
 global imgs;
@@ -186,6 +196,7 @@ function split(row)
 global projection;
 global properties;
 global CONFIG;
+global PARA;
 % showRow(row);
 temp = uint8(projection.allRows{row});
 c = size(temp,2);
@@ -210,8 +221,8 @@ result = fixChars(result);
 
 [~, c] = size(result);
 index = 2;
-while (index < c)
-    if (result(1, index) - result(1, index - 1) <= CONFIG.GAP)
+while (index < c)%英文字符之类的合并
+    if (result(1, index) - result(1, index - 1) <= PARA.GAP)
         result(index - 1 : index) = [];
         c = c - 2;
     end
@@ -236,6 +247,7 @@ func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
 %% 修复字符之间的断裂, 比如说 如 比
 function[arr] = fixChars(arr)
 global PARA;
+global CONFIG;
 %% 输入
 % 标准字符宽度
 % 合并，例如  如  即  这些字
@@ -244,8 +256,10 @@ x = 2;
 while (x < c - 2)%合并可以改进
     if (arr(1, x) - arr(1, x - 1) < PARA.ONE_CHAR_WIDTH*0.6)
          if (arr(1, x + 2) - arr(1, x + 1) < PARA.ONE_CHAR_WIDTH*0.6)
-             arr(x : x + 1) = [];
-             c = c - 2;
+            if(arr(1,x+1)-arr(1,x)<2*PARA.GAP)
+               arr(x : x + 1) = [];
+                 c = c - 2;
+            end
          end
     end
     x = x + 2;
@@ -259,13 +273,13 @@ global properties;
 global CONFIG;% 用户设置参数集合
 %新建图像
 s = size(properties.section,1);
-imgs.output = uint8(zeros(CONFIG.HEIGHT,CONFIG.WIDTH));
+imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
 imgs.output = 255-imgs.output;
 x = CONFIG.x;
 y = CONFIG.y;
 p =1;%输出文件的编号
 for i = 1:s
-    if(CONFIG.HEIGHT-CONFIG.padding < x+properties.section(i,4)*CONFIG.Fx)%另起一页
+    if(CONFIG.height-CONFIG.padding < x+properties.section(i,4)*CONFIG.Fx)%另起一页
 %         figure;imshow(imgs.output);title('section reflow');
         [x,y,p]=func_newPage(p);
     end
@@ -276,7 +290,7 @@ for i = 1:s
     end
     [x,y]=func_append(x,y,properties.section(i,1:4),'section');
     [x,y]=func_newline(x,y,properties.section(i,4));
-    x = round(x+PARA.ROW_SPACING*CONFIG.Fx);
+    x = round(x+PARA.LINE_SPACING*CONFIG.Fx);
 end
 %% 另起一页
 function[x,y,p] = func_newPage(p)
@@ -284,7 +298,7 @@ global imgs;
 global CONFIG;
 func_save('output',strcat('p',num2str(p)),'jpg');
 p= p+1;
-imgs.output = uint8(zeros(CONFIG.HEIGHT,CONFIG.WIDTH));
+imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
 imgs.output = 255-imgs.output;
 x=CONFIG.x;
 y=CONFIG.y;
@@ -317,17 +331,16 @@ switch type
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
         x =x;
         y=y+sw;
-    case 'char'%todo 用户设定缩放因子 Fy
+    case 'char'
         imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),CONFIG.Fx*CONFIG.Fy);
         [sh,sw]=size(imrs);
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
         x =x;
-        y = ceil(y+sw+CONFIG.GAP*CONFIG.Fy*CONFIG.Fy);
+        y = ceil(y+sw+CONFIG.gap);
 end
 %% 根据传入高度换行返回新的坐标
 function[x,y]=func_newline(x,y,height)
 global CONFIG;
-global PARA;
 y= CONFIG.y;
 x=x+height;
 %% 获得每一行水平方向的投影,保存到projection.allRows
@@ -389,7 +402,7 @@ for i = 1:row
     else%非图片段
         if(head_blank-PAGE.SAFE> PARA.ONE_CHAR_WIDTH)%大于一个标准字符大小
             properties.section(s,:)=[x,y,w,h,0,0,i,i];%认为是新的一段
-            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH)%大于一个标准缩进值
+            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.3)%大于一个标准缩进值
                 properties.section(s,5)=head_blank/PAGE.WIDTH;%计算它相对缩减值
             end
             s=s+1;
@@ -509,7 +522,7 @@ hor = func_projectTo(func_getThePartOf('binary',1,rp(i,1)+1,PAGE.WIDTH,tmp(i)),'
 %%% figure;plot(1:length(hor),hor);title('垂直方向像素');
 i = 1;
 num=1;
-tmp = zeros(1,200);%记录字符宽
+tmp = zeros(1,300);%记录字符宽
 while(i<PAGE.WIDTH)
     if(hor(i)~=0)
         star=i;
@@ -526,14 +539,42 @@ end
 tmp(num:end)=[];
 PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
 %PARA.ONE_TAB_WIDTH
-PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2.6);
+PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
 %PARA.ROW_properties.allRows_SPACING
 row = size(rp,1);
 tmp = zeros(1,row-1);
 for i = 2:row
     tmp(i-1)=rp(i,1)-rp(i-1,2);
 end
-PARA.ROW_SPACING = floor(func_getStatistcalAVG(tmp));
+PARA.LINE_SPACING = floor(func_getStatistcalAVG(tmp));
+% PARA.GAP 统计字体间距
+i = 1;
+num=1;
+tmp = zeros(1,300);%空白宽
+while(hor(i)==0)
+    i=i+1;
+end
+len =PAGE.WIDTH;
+while(hor(len)==0)
+    len=len-1;
+end
+while(i <=len)
+    if(hor(i)==0)
+        star = i;
+        while(hor(i)==0)
+            i=i+1;
+        end
+        ed = i;
+        tmp(num) = ed-star;
+        num=num+1;
+        continue;
+    end
+    i=i+1;
+end
+tmp(num:end)=[];
+avg = mean(tmp);
+%取中位三分之一可能能容易取到英文,因此利用平均值筛选掉高低数值求平均
+PARA.GAP = mean(tmp(tmp>0.3*avg & tmp<0.7*avg));
 % TFTOOL 检测小工具
 PARA.TFTOOL = uint8(ones(1,floor(PARA.ONE_CHAR_WIDTH*3.5)));
 %% 求一个数组中间三分之一上下取整区间的平均值
