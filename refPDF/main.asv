@@ -131,11 +131,10 @@ for i = 1:s_size%cur
             end
         end
     end
-    if(sp(6)==1)%todo 解决行距的问题
+    if(sp(6)==1)
         [x,y]=func_newline(x,y,sp(4)*CONFIG.Fx);
-    else%换行换的是最后一行的高度
-        h = properties.allRows(sp(8),2)-properties.allRows(sp(8),1)-1;
-        [x,y]=func_newline(x,y,h*CONFIG.Fx*CONFIG.Fy);
+    else
+        ewline(x,y,sp(4)*CONFIG.Fx);
     end
 end
 
