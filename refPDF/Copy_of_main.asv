@@ -152,10 +152,10 @@ function initCONFIG()
 global CONFIG;
 global PARA;
 global PAGE;
-CONFIG.gap =2.5;%todo 等待统计
+CONFIG.gap =PARA.GAP;%todo 等待统计
 CONFIG.padding = 0;
 CONFIG.height = PAGE.HEIGHT;
-CONFIG.width= PAGE.WIDTH;
+CONFIG.width= PAGE.WIDTH*0.50;
 w = CONFIG.width -2*CONFIG.padding;
 CONFIG.Fx=w/double(PAGE.WIDTH);
 CONFIG.Fy=1.5;%todo 默认1
@@ -195,7 +195,7 @@ end
 function split(row)
 global projection;
 global properties;
-global CONFIG;
+
 global PARA;
 % showRow(row);
 temp = uint8(projection.allRows{row});
@@ -247,7 +247,7 @@ func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
 %% 修复字符之间的断裂, 比如说 如 比
 function[arr] = fixChars(arr)
 global PARA;
-global CONFIG;
+
 %% 输入
 % 标准字符宽度
 % 合并，例如  如  即  这些字
@@ -339,7 +339,7 @@ switch type
         y = ceil(y+sw+CONFIG.gap);
 end
 %% 根据传入高度换行返回新的坐标
-function[x,y]=func_newline(x,y,height)
+function[x,y]=func_newline(x,~,height)
 global CONFIG;
 y= CONFIG.y;
 x=x+height;
@@ -459,7 +459,7 @@ h = properties.allRows(i,2)-properties.allRows(i,1)-1;
 w=size(imgs.b,2);
 figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %% 判断某一行是否为图片
-function [flag] =isImgSection(idx,x,y,w,h)
+function [flag] =isImgSection(idx,x,~,~,h)
 global PARA;
 global projection;
 flag = 0;
@@ -583,47 +583,6 @@ n = length(tmp);
 left = floor(n/3);right = ceil(n/3*2);
 tmp =sort(tmp);
 result = mean(tmp(left:right));
-%% 计算正文内容的宽高
-function getInteretingContentSize()
-% 用户截取的感兴趣区域图像部分(todo)
-global PAGE;
-global imgs;
-pos = [1,1,size(imgs.b,2),size(imgs.b,1)];
-h=imrect;%鼠标变成十字，用来选取感兴趣区域
-%点击ok之后继续todo gui的时候要修改
-pos=getPosition(h);%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
-pos=uint16(pos);%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
-%注意上面是图像的x,y, 下面矩阵要用应该交换一下
-
-PAGE.SAFE =10;
- %  宽度
-hor = func_projectTo(imgs.b,'horizontal');
-% figure;plot(1:length(hor),hor);title('垂直方向像素');
-PAGE.LX=pos(1);
-PAGE.RX=pos(1)+pos(3)-1;
-while(hor(PAGE.LX)==0) 
-    PAGE.LX=PAGE.LX+1;
-end;
-while(hor(PAGE.RX)==0) 
-    PAGE.RX=PAGE.RX-1;
-end;
-PAGE.RX=PAGE.RX+1;
-PAGE.LX = PAGE.LX-PAGE.SAFE;%上下左右的安全区域
-PAGE.RX = PAGE.RX+PAGE.SAFE;%上下左右的安全区域
-PAGE.WIDTH=double(PAGE.RX-PAGE.LX);
-% 高度
-ver = func_projectTo(imgs.b,'vertical');
-PAGE.UY=pos(2);
-PAGE.DY=pos(2)+pos(4)-1;
-while(ver(PAGE.UY)==0) 
-    PAGE.UY=PAGE.UY+1;
-end;
-while(ver(PAGE.DY)==0) 
-    PAGE.DY=PAGE.DY-1;
-end;
-PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
-PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域
-PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
 % 输入

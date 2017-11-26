@@ -62,20 +62,10 @@ global CONFIG;
 %--x 左上角x
 %--y 左上角y
 %--Fx 缩放因子 新文档宽/原文档宽
-imgs.o = imread('page.jpg');
-% imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
-% imgs.o = imread('test/ita1 (3).jpg');
-% imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
-imgs.g =imgs.o;
-if (size(imgs.o,3) ~= 1)
-    imgs.g = func_imgToGray(imgs.o);%转灰度图
-end
-imgs.b = func_imgToBin(imgs.g);%二值化
-figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
-getInteretingContentSize();%计算感兴趣区域页面宽度,左右边界
-%划出感兴趣区域后, imgs中更新
-imgs.b = func_getThePartOf('binary',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
-imgs.g = func_getThePartOf('gray',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
+
+
+
+
 imshow(imgs.g);set(gca,'position',[0,0,1,1]);%显示图像
 func_statisticalParameter();%基本参数统计求均值
 initCONFIG();
@@ -147,22 +137,7 @@ for i = 1:s_size%cur
 end
 
 
-%% 初始化 用户配置参数
-function initCONFIG()
-global CONFIG;
-global PARA;
-global PAGE;
-CONFIG.gap =PARA.GAP;%todo 等待统计
-CONFIG.padding = 0;
-CONFIG.height = PAGE.HEIGHT;
-CONFIG.width= PAGE.WIDTH*0.50;
-w = CONFIG.width -2*CONFIG.padding;
-CONFIG.Fx=w/double(PAGE.WIDTH);
-CONFIG.Fy=1.5;%todo 默认1
-CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
-CONFIG.x = CONFIG.padding+1;
-CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
-CONFIG.text_indent = PARA.ONE_TAB_WIDTH*CONFIG.Fx*CONFIG.Fy;
+
 %% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 function initProperties()
 global imgs;
@@ -355,20 +330,7 @@ for i = 1:row
     imp = func_getThePartOf('binary',1,properties.allRows(i,1)+1,PAGE.WIDTH,h);
     projection.allRows{i}=func_projectTo(imp,'horizontal');
 end
-%% 根据左上角坐标和长宽取出图像的一部分
-function[imp]=func_getThePartOf(type,x,y,w,h)
-% 输入
-% type 灰度或者二值图
-% xy 左上角坐标
-% wh 宽和高
-global imgs;
-x=uint64(x);y=uint64(y);w=uint64(w);h=uint64(h);%matlab中似乎没有自动取最大变量类型,预防万一
-switch type
-    case 'gray'
-        imp = imgs.g(y:y+h-1,x:x+w-1);
-    case 'binary'
-        imp = imgs.b(y:y+h-1,x:x+w-1);
-end
+
 %% 把行中合并成段,图片自成一段
 function getSectionProperty()
 % s段落数
@@ -477,153 +439,8 @@ else
     end
 end
 
-%% 统计样本,计算出基本参数的值
-function func_statisticalParameter()
-%todo 选择样本之后固定这些参数
-global PARA;%统计参数
-global PAGE;
-global imgs;
-%page.jpg
-% PARA.ONE_CHAR_WIDTH = 23;
-% PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*3.5);
-% PARA.ONE_ROW_HEIGHT=32;
-%test
-% PARA.ONE_CHAR_WIDTH = 80;
-% PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*3.5);
-% PARA.ONE_ROW_HEIGHT=100;
-%计算样本的行信息
-ver = func_projectTo(imgs.b,'vertical');
-row = 0;
-len = size(ver,1);
-rp=zeros(len,2);
-i = 1;
-while (i<=len)
-    if (ver(i)~=0)
-        row = row+1;
-        rp(row,1)=i-1;
-        while(ver(i)~=0&&i<len) 
-            i=i+1;
-        end;
-        rp(row,2)=i;
-    end
-    i=i+1;
-end
-rp(row+1:end,:)=[];
 
-% 中间三分之一求平均值法
-% PARA.ONE_ROW_HEIGHT
-tmp =rp(:,2)-rp(:,1)-1;
-PARA.ONE_ROW_HEIGHT = round(func_getStatistcalAVG(tmp));
-% PARA.ONE_CHAR_WIDTH
-idx = find(tmp==uint32(median(tmp)));
-i = idx(ceil(length(idx)/2));
-% figure;imshow(func_getThePartOf('binary',PAGE.LX,rp(i,1)+1,PAGE.WIDTH,tmp(i)));
-hor = func_projectTo(func_getThePartOf('binary',1,rp(i,1)+1,PAGE.WIDTH,tmp(i)),'horizontal');%获得这一行的水平投影
-%%% figure;plot(1:length(hor),hor);title('垂直方向像素');
-i = 1;
-num=1;
-tmp = zeros(1,300);%记录字符宽
-while(i<PAGE.WIDTH)
-    if(hor(i)~=0)
-        star=i;
-        while(hor(i)~=0)
-            i=i+1;
-        end
-        ed = i;
-        tmp(num)=ed-star;
-         num=num+1;
-        continue;
-    end
-    i=i+1;
-end
-tmp(num:end)=[];
-PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
-%PARA.ONE_TAB_WIDTH
-PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
-%PARA.ROW_properties.allRows_SPACING
-row = size(rp,1);
-tmp = zeros(1,row-1);
-for i = 2:row
-    tmp(i-1)=rp(i,1)-rp(i-1,2);
-end
-PARA.LINE_SPACING = floor(func_getStatistcalAVG(tmp));
-% PARA.GAP 统计字体间距
-i = 1;
-num=1;
-tmp = zeros(1,300);%空白宽
-while(hor(i)==0)
-    i=i+1;
-end
-len =PAGE.WIDTH;
-while(hor(len)==0)
-    len=len-1;
-end
-while(i <=len)
-    if(hor(i)==0)
-        star = i;
-        while(hor(i)==0)
-            i=i+1;
-        end
-        ed = i;
-        tmp(num) = ed-star;
-        num=num+1;
-        continue;
-    end
-    i=i+1;
-end
-tmp(num:end)=[];
-avg = mean(tmp);
-%取中位三分之一可能能容易取到英文,因此利用平均值筛选掉高低数值求平均
-PARA.GAP = mean(tmp(tmp>0.3*avg & tmp<0.7*avg));
-% TFTOOL 检测小工具
-PARA.TFTOOL = uint8(ones(1,floor(PARA.ONE_CHAR_WIDTH*3.5)));
-%% 求一个数组中间三分之一上下取整区间的平均值
-function[result]=func_getStatistcalAVG(tmp)
-n = length(tmp);
-left = floor(n/3);right = ceil(n/3*2);
-tmp =sort(tmp);
-result = mean(tmp(left:right));
-%% 计算正文内容的宽高
-function getInteretingContentSize()
-% 用户截取的感兴趣区域图像部分(todo)
-global PAGE;
-global imgs;
-pos = [1,1,size(imgs.b,2),size(imgs.b,1)];
-h=imrect;%鼠标变成十字，用来选取感兴趣区域
-%点击ok之后继续todo gui的时候要修改
-pos=getPosition(h);%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
-pos=uint16(pos);%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
-%注意上面是图像的x,y, 下面矩阵要用应该交换一下
 
-PAGE.SAFE =10;
- %  宽度
-hor = func_projectTo(imgs.b,'horizontal');
-% figure;plot(1:length(hor),hor);title('垂直方向像素');
-PAGE.LX=pos(1);
-PAGE.RX=pos(1)+pos(3)-1;
-while(hor(PAGE.LX)==0) 
-    PAGE.LX=PAGE.LX+1;
-end;
-while(hor(PAGE.RX)==0) 
-    PAGE.RX=PAGE.RX-1;
-end;
-PAGE.RX=PAGE.RX+1;
-PAGE.LX = PAGE.LX-PAGE.SAFE;%上下左右的安全区域
-PAGE.RX = PAGE.RX+PAGE.SAFE;%上下左右的安全区域
-PAGE.WIDTH=double(PAGE.RX-PAGE.LX);
-% 高度
-ver = func_projectTo(imgs.b,'vertical');
-PAGE.UY=pos(2);
-PAGE.DY=pos(2)+pos(4)-1;
-while(ver(PAGE.UY)==0) 
-    PAGE.UY=PAGE.UY+1;
-end;
-while(ver(PAGE.DY)==0) 
-    PAGE.DY=PAGE.DY-1;
-end;
-PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
-PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域
-PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
 % 输入
@@ -682,33 +499,6 @@ properties.allRows(row+1:end,:)=[];
 % tmp =properties.allRows(:,2)-properties.allRows(:,1);
 % idx = tmp<7;去躁点或者定筛选值???无需再考虑
 % properties.allRows(idx,:)=[];
-%% 水平方向或垂直方向的投影
-function[arr]=func_projectTo(img,type)
-% @输入
-% imb    图像
-% type   投影类型
-% @返回
-% arr      投影结果
-if(strcmp(type,'horizontal'))
-    arr =sum(img(:,:));
-else
-    img = img';
-    arr = sum(img(:,:));
-    arr=arr';
-end
-%% 转灰度图
-function[im2]= func_imgToGray(img)
-if (size(img,3) ~= 1)                % 要求输入图像为单通道灰度图像
-    im2        = rgb2gray(img);
-end
-%% 二值化图像
-function[im2]= func_imgToBin(img)
-img            = 255 - img;          
-im2            = double(img);
-%计算trd, 这种trd计算方式,对pdf文档神效
-trd            = 0.5*mean(im2(im2>0)); 
-im2(im2 > trd) = 255;                
-im2(im2 <=trd) = 0;
-im2=uint8(im2);
+
     
     
