@@ -30,6 +30,7 @@ global imgs;%灰度图像
 %--imgs.g 灰度图像
 %--imgs.b 二值图像
 %--imgs.output 输出图像
+%--p 输出页面的序号
 global properties;
 % properties是行分割,段分割的相关信息, 包含
 %--allRows:  行信息
@@ -62,7 +63,7 @@ global CONFIG;
 %--x 左上角x
 %--y 左上角y
 %--Fx 缩放因子 新文档宽/原文档宽
-global UI_config;
+global UI;
 % 界面上的设定数据
 %--perview 是否显示预览
 %--inURL 输入文件地址
@@ -70,10 +71,12 @@ global UI_config;
 %--index 当前文件下标
 %--outURL 输出文件地址
 %--isOutput 是否输出
-imgs.o = imread('page.jpg');
-% imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
+%--n图片的数量
+%--isEnd 图片读取结束标志
+% imgs.o = imread('page.jpg');
+% imgs.o = imread('test/MATLAB编程入门教程_页面_03.jpg');
 % imgs.o = imread('test/ita1 (3).jpg');
-% imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
+imgs.o = imread('test/页面提取自－《算法（第四版）.中文版.图灵程序设计丛书》Algorithms_2.jpg');
 imgs.g =imgs.o;
 if (size(imgs.o,3) ~= 1)
     imgs.g = func_imgToGray(imgs.o);%转灰度图
@@ -100,7 +103,7 @@ global PAGE;
 global imgs;
 %新建图像
 s_size = size(properties.section,1);
-imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
+imgs.output = uint8(zeros(ceil(CONFIG.height),ceil(CONFIG.width)));
 imgs.output = 255-imgs.output;
 x = CONFIG.x;
 y= CONFIG.y;
@@ -163,10 +166,10 @@ global PAGE;
 CONFIG.gap =PARA.GAP;%todo 等待统计
 CONFIG.padding = 0;
 CONFIG.height = PAGE.HEIGHT;
-CONFIG.width= PAGE.WIDTH*0.50;
+CONFIG.width= PAGE.WIDTH;
 w = CONFIG.width -2*CONFIG.padding;
 CONFIG.Fx=w/double(PAGE.WIDTH);
-CONFIG.Fy=1.5;%todo 默认1
+CONFIG.Fy=2;%todo 默认1
 CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
 CONFIG.x = CONFIG.padding+1;
 CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
@@ -250,7 +253,7 @@ for i=1:2:n-1
     properties.charsAtRows{row}(c,:)=[x,y,w,h];
     c=c+1;
 end
-func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
+% func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
 
 %% 修复字符之间的断裂, 比如说 如 比
 function[arr] = fixChars(arr)
@@ -395,7 +398,7 @@ s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
 for i = 1:row     
-%     if(i == 3)
+%     if(i == row)
 %          showRow(i);
 % %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %      end
@@ -410,13 +413,14 @@ for i = 1:row
     else%非图片段
         if(head_blank-PAGE.SAFE> PARA.ONE_CHAR_WIDTH)%大于一个标准字符大小
             properties.section(s,:)=[x,y,w,h,0,0,i,i];%认为是新的一段
-            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.3)%大于一个标准缩进值
+            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.4)%大于一个标准缩进值update
                 properties.section(s,5)=head_blank/PAGE.WIDTH;%计算它相对缩减值
+%                 showRow(i);
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片
-                properties.section(s, :)=[x,y,w,h, head_blank/PAGE.WIDTH, 0, i, i];
+            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
+                properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;
             else%非图片,合并
                 %宽度的更新
@@ -472,12 +476,14 @@ global PARA;
 global projection;
 flag = 0;
 hor = projection.allRows{idx};
+
 %从行的高度判断
-if(h>PARA.ONE_ROW_HEIGHT*1.5) 
+if(h>PARA.ONE_ROW_HEIGHT*1.7) 
     flag = 1;
 else
 %     figure;imshow(func_getThePartOf('binary',x,y,w,h));
-    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+    len = min(size(hor,2),x+size(PARA.TFTOOL,2)-1);
+    hor = hor(1,x:len);
     tmp =and(hor,PARA.TFTOOL);
     blank = find(tmp==0);
     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
@@ -545,7 +551,10 @@ while(i<PAGE.WIDTH)
     i=i+1;
 end
 tmp(num:end)=[];
-PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
+avg = mean(tmp);
+%取中位三分之一可能能容易取到英文,因此利用平均值筛选掉低数值求平均tag
+PARA.ONE_CHAR_WIDTH = mean(tmp(tmp>avg));%update
+% PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
 %PARA.ONE_TAB_WIDTH
 PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
 %PARA.ROW_properties.allRows_SPACING
@@ -626,11 +635,11 @@ PAGE.DY=pos(2)+pos(4)-1;
 while(ver(PAGE.UY)==0) 
     PAGE.UY=PAGE.UY+1;
 end;
-while(ver(PAGE.DY)==0) 
-    PAGE.DY=PAGE.DY-1;
-end;
+% while(ver(PAGE.DY)==0) 
+%     PAGE.DY=PAGE.DY-1;
+% end;
 PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
-PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域
+% PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域 %update下边不该trim
 PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
@@ -671,6 +680,7 @@ function getRowProperty()
 %                      它的结构为[up, buttom], 即第x行, 上边界为up,下边界为buttom
 global projection;
 global properties;
+global PARA;
 row = 0;
 len = size(projection.ver,1);
 properties.allRows=zeros(len,2);
@@ -687,9 +697,11 @@ while (i<=len)
     i=i+1;
 end
 properties.allRows(row+1:end,:)=[];
-% tmp =properties.allRows(:,2)-properties.allRows(:,1);
-% idx = tmp<7;去躁点或者定筛选值???无需再考虑
-% properties.allRows(idx,:)=[];
+%去躁点或者定筛选值???无需再考虑
+%需要考虑, 有亮点存在update
+tmp =properties.allRows(:,2)-properties.allRows(:,1);
+idx = tmp<PARA.ONE_ROW_HEIGHT*0.1;
+properties.allRows(idx,:)=[];
 %% 水平方向或垂直方向的投影
 function[arr]=func_projectTo(img,type)
 % @输入

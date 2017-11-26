@@ -87,7 +87,7 @@ h.PARA.LINE_SPACING =20;
 h.PARA.GAP = 2.5625;
 h.PARA.TFTOOL=ones(1,101);
 guidata(obj, h);
-% ---输入图片cur
+% ---输入图片
 function input_button_Callback(hObject, eventdata, h)
 global PAGE;
 global imgs;
@@ -99,7 +99,9 @@ global UI;
 PAGE =h.PAGE;
 PARA=h.PARA;
 UI.isOutput = 0;
+UI.isEnd = 0;
 UI.perview =0;
+imgs.p=1;
 initCONFIG();
 %打开图片
 [filename, pathname, filterindex] = uigetfile({'*.PNG;*.jpg;*.tif',...
@@ -140,8 +142,8 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 
 %% 启动参数样本界面输入页面
 function para_button_Callback(hObject, eventdata, handles)
-% GUI2(hObject,handles);  test
-testInit(hObject,handles);
+GUI2(hObject,handles);  %test
+% testInit(hObject,handles);
 handles.input_button.Enable ='on';
 % --- 设置路径
 function url_button_Callback(hObject, eventdata, handles)
@@ -309,8 +311,16 @@ end
 % --- 重排并输出
 function output_button_Callback(hObject, eventdata, handles)
 global UI;
+global imgs;
 UI.isOutput = 1;
-func_reflow();
+imgs.p=1;
+while(UI.isEnd==0)
+    func_reflow();
+    func_newPage();
+    func_nextImg();%cur
+end
+handles.output_button.Enable ='off';
+handles.url_button.Enable ='off';
 % --- Executes on button press in section_reflow_checkbox.
 function section_reflow_checkbox_Callback(hObject, eventdata, handles)
 % hObject    handle to section_reflow_checkbox (see GCBO)
@@ -330,7 +340,7 @@ CONFIG.height = PAGE.HEIGHT;
 CONFIG.width= PAGE.WIDTH;
 w = CONFIG.width -2*CONFIG.padding;
 CONFIG.Fx=w/double(PAGE.WIDTH);
-CONFIG.Fy=1;%todo 默认1
+CONFIG.Fy=1;
 CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
 CONFIG.x = CONFIG.padding+1;
 CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
@@ -345,20 +355,20 @@ end
 guidata(hObject, handles);
 i = str2double(str);
 %% 取得当前处理图片集合中的下一张图片
-function func_nextImg()%tag
+function func_nextImg()
 global imgs;
 global PAGE;
 global UI;
 UI.isEnd = 0;
 if(iscell(UI.names)==1)
-    n = size(UI.names,2);
+    UI.n = size(UI.names,2);
 else
-    n = 1;
+    UI.n = 1;
 end
-if(UI.index>n)
+if(UI.index>UI.n)
     UI.isEnd = 1;
 else
-    if(n==1)
+    if(UI.n==1)
         imgs.o=imread([UI.inURL,UI.names]);
     else
         imgs.o = imread([UI.inURL,UI.names{UI.index}]);
@@ -401,12 +411,12 @@ im2(im2 > trd) = 255;
 im2(im2 <=trd) = 0;
 im2=uint8(im2);
 %% 执行重排
-function func_reflow()%tag
+function func_reflow()
 global imgs;
 initProperties();% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 func_charsReflow();
 imshow(imgs.output);
-%% 文字回流(重排)
+%% 文字回流(重排) cur
 function func_charsReflow()
 global properties;
 global CONFIG;
@@ -415,7 +425,7 @@ global PAGE;
 global imgs;
 %新建图像
 s_size = size(properties.section,1);
-imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
+imgs.output = uint8(zeros(ceil(CONFIG.height),ceil(CONFIG.width)));
 imgs.output = 255-imgs.output;
 x = CONFIG.x;
 y= CONFIG.y;
@@ -427,12 +437,12 @@ for i = 1:s_size
     if(T~=0)%缩进保留或是缩减两个字符
         y = floor(y+CONFIG.Fx*PAGE.WIDTH*sp(5));
     else
-        y = floor(y+CONFIG.text_indent);%todo 提供设置
+        y = floor(y+CONFIG.text_indent);
     end
     if(sp(6)==1)%如果是图片段
         if(CONFIG.height-CONFIG.padding < x+sp(4)*CONFIG.Fx)%另起一页
             %         figure;imshow(imgs.output);title('section reflow');
-            [x,~,p]=func_newPage(p);
+            [x,~]=func_newPage();
         end
         [x,y]=func_append(x,y,sp(1:4),'section');
     else
@@ -447,7 +457,7 @@ for i = 1:s_size
                     x = ceil(x+ CONFIG.line_spacing);
                 end
                 if(CONFIG.height-CONFIG.padding < x+chars(n,4)*CONFIG.Fx*CONFIG.Fy)%另起一页
-                    [x,y,p]=func_newPage(p);
+                    [x,y]=func_newPage();
                 end
                 %非首行是否缩进保留
                 if(y==CONFIG.y&&T~=0)% 新的一行,需不需要缩进保留
@@ -469,14 +479,14 @@ for i = 1:s_size
     end
 end
 %% 另起一页
-function[x,y,p] = func_newPage(p)
+function[x,y] = func_newPage()
 global imgs;
 global CONFIG;
 global UI;
 if(UI.isOutput==1)
-    func_save(UI.outURL,strcat('p',num2str(p)),'jpg');
+    func_save(UI.outURL,strcat('p',num2str(imgs.p)),'jpg');
+    imgs.p= imgs.p+1;
 end
-p= p+1;
 imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
 imgs.output = 255-imgs.output;
 x=CONFIG.x;
@@ -659,7 +669,6 @@ switch type
 end
 %% 计算行行首空格数
 function [head_blank,tail_blank]=trim(row)
-%todo debug hor取的是截取后的,而hb访问的却是全图的因此会出错
 global projection;%每一行的水平投影
 
 hor = projection.allRows{row};
@@ -797,11 +806,12 @@ global projection;
 flag = 0;
 hor = projection.allRows{idx};
 %从行的高度判断
-if(h>PARA.ONE_ROW_HEIGHT*1.5) 
+if(h>PARA.ONE_ROW_HEIGHT*1.7) 
     flag = 1;
 else
 %     figure;imshow(func_getThePartOf('binary',x,y,w,h));
-    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+    len = min(size(hor,2),x+size(PARA.TFTOOL,2)-1);
+    hor = hor(1,x:len);
     tmp =and(hor,PARA.TFTOOL);
     blank = find(tmp==0);
     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
