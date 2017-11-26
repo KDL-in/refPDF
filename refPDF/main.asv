@@ -57,11 +57,15 @@ global CONFIG;
 %--height 新文档高
 %--Fy 字体放大倍数
 %--line_spacing 行距
-%--text-indent 缩进距离
+%--text_indent 缩进距离
 %--以上是用户设置,有默认值,以下是通过上面计算得来
 %--x 左上角x
 %--y 左上角y
 %--Fx 缩放因子 新文档宽/原文档宽
+global UI_config;
+% 界面上的设定数据
+%--perview 是否显示预览
+%--inURL
 imgs.o = imread('page.jpg');
 % imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
 % imgs.o = imread('test/ita1 (3).jpg');
@@ -583,6 +587,47 @@ n = length(tmp);
 left = floor(n/3);right = ceil(n/3*2);
 tmp =sort(tmp);
 result = mean(tmp(left:right));
+%% 计算正文内容的宽高
+function getInteretingContentSize()
+% 用户截取的感兴趣区域图像部分(todo)
+global PAGE;
+global imgs;
+pos = [1,1,size(imgs.b,2),size(imgs.b,1)];
+h=imrect;%鼠标变成十字，用来选取感兴趣区域
+%点击ok之后继续todo gui的时候要修改
+pos=getPosition(h);%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
+pos=uint16(pos);%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
+%注意上面是图像的x,y, 下面矩阵要用应该交换一下
+
+PAGE.SAFE =10;
+ %  宽度
+hor = func_projectTo(imgs.b,'horizontal');
+% figure;plot(1:length(hor),hor);title('垂直方向像素');
+PAGE.LX=pos(1);
+PAGE.RX=pos(1)+pos(3)-1;
+while(hor(PAGE.LX)==0) 
+    PAGE.LX=PAGE.LX+1;
+end;
+while(hor(PAGE.RX)==0) 
+    PAGE.RX=PAGE.RX-1;
+end;
+PAGE.RX=PAGE.RX+1;
+PAGE.LX = PAGE.LX-PAGE.SAFE;%上下左右的安全区域
+PAGE.RX = PAGE.RX+PAGE.SAFE;%上下左右的安全区域
+PAGE.WIDTH=double(PAGE.RX-PAGE.LX);
+% 高度
+ver = func_projectTo(imgs.b,'vertical');
+PAGE.UY=pos(2);
+PAGE.DY=pos(2)+pos(4)-1;
+while(ver(PAGE.UY)==0) 
+    PAGE.UY=PAGE.UY+1;
+end;
+while(ver(PAGE.DY)==0) 
+    PAGE.DY=PAGE.DY-1;
+end;
+PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
+PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域
+PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
 % 输入

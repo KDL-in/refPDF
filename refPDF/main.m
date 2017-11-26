@@ -57,11 +57,19 @@ global CONFIG;
 %--height 新文档高
 %--Fy 字体放大倍数
 %--line_spacing 行距
-%--text-indent 缩进距离
+%--text_indent 缩进距离
 %--以上是用户设置,有默认值,以下是通过上面计算得来
 %--x 左上角x
 %--y 左上角y
 %--Fx 缩放因子 新文档宽/原文档宽
+global UI_config;
+% 界面上的设定数据
+%--perview 是否显示预览
+%--inURL 输入文件地址
+%--names 输入文件名数组
+%--index 当前文件下标
+%--outURL 输出文件地址
+%--isOutput 是否输出
 imgs.o = imread('page.jpg');
 % imgs.o = imread('test/MATLAB编程入门教程_页面_11.jpg');
 % imgs.o = imread('test/ita1 (3).jpg');

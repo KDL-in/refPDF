@@ -46,6 +46,7 @@ clc;
                   'Image Files (*.PNG,*.jpg,*.tif)'},'请选择输入图像 ...','on');
 axes(handles.axes1); % 在指定的图像坐标系(即axes1)上显示图像
 imgs.o = imread([pathname,filename]);
+imgs.g = imgs.o;
 if (size(imgs.o,3) ~= 1)
     imgs.g = func_imgToGray(imgs.o);%转灰度图
 end

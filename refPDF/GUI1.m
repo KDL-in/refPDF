@@ -22,7 +22,7 @@ function varargout = GUI1(varargin)
 
 % Edit the above text to modify the response to help GUI1
 
-% Last Modified by GUIDE v2.5 26-Nov-2017 08:30:59
+% Last Modified by GUIDE v2.5 26-Nov-2017 20:07:28
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -46,15 +46,11 @@ end
 
 % --- Executes just before GUI1 is made visible.
 function GUI1_OpeningFcn(hObject, eventdata, handles, varargin)
-% This function has no output args, see OutputFcn.
-% hObject    handle to figure
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-% varargin   command line arguments to GUI1 (see VARARGIN)
+
 
 % Choose default command line output for GUI1
 handles.output = hObject;
-
+% handles.input_button.Enable ='on';
 % Update handles structure
 guidata(hObject, handles);
 
@@ -73,29 +69,68 @@ function varargout = GUI1_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
+%% 测试用方法, 读入数据
+function testInit(obj,h)
+h.PAGE.SAFE = 10;
+h.PAGE.LX = 174;
+h.PAGE.RX = 1398;
+h.PAGE.WIDTH = 1224;
+h.PAGE.UY = 184;
+h.PAGE.DY = 1706;
+h.PAGE.HEIGHT = 1521;
+h.PAGE.SAFE = 10;
+h.PAGE.SAFE = 10;
+h.PARA.ONE_ROW_HEIGHT = 29;
+h.PARA.ONE_CHAR_WIDTH = 29;
+h.PARA.ONE_TAB_WIDTH =58;
+h.PARA.LINE_SPACING =20;
+h.PARA.GAP = 2.5625;
+h.PARA.TFTOOL=ones(1,101);
+guidata(obj, h);
 % ---输入图片cur
-function input_button_Callback(hObject, eventdata, handles)
+function input_button_Callback(hObject, eventdata, h)
 global PAGE;
 global imgs;
 global PARA;
 global CONFIG;
-%做一些初始化工作
-PAGE =handles.PAGE;
-PARA=handles.PARA;
-initCONFIG();
+global UI;
 
+%做一些初始化工作
+PAGE =h.PAGE;
+PARA=h.PARA;
+UI.isOutput = 0;
+UI.perview =0;
+initCONFIG();
 %打开图片
 [filename, pathname, filterindex] = uigetfile({'*.PNG;*.jpg;*.tif',...
                   'Image Files (*.PNG,*.jpg,*.tif)'},'请选择输入图像 ...','MultiSelect','on');
+UI.inURL = pathname;
+UI.names = filename;
+UI.index = filterindex;
+func_nextImg();
+axes(h.axes2);
+imshow(imgs.g);
+% 打开图片后更新界面. 设置默认值
+h.config_panel.Visible = 'on';
+h.height_edit.String = CONFIG.height;
+h.width_edit.String = CONFIG.width;        
+h.gap_edit.String = CONFIG.gap;        
+h.padding_edit.String = CONFIG.padding;        
+h.linespacing_edit.String = CONFIG.line_spacing;        
+h.text_indent_edit.String = CONFIG.text_indent; 
+h.font_size_edit.String =CONFIG.Fy;
 
-
-% --- Executes on button press in perview_button.
-function perview_button_Callback(hObject, eventdata, handles)
-% hObject    handle to perview_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
+h.para_button.Enable = 'off';
+h.perview_checkbox.Enable = 'on';
+h.url_button.Enable = 'on';
+% --- 是否显示预览
+function perview_checkbox_Callback(hObject, eventdata, handles)
+global UI
+if (get(handles.perview_checkbox,'Value')==1)
+    UI.perview = 1;
+else
+    UI.perview = 0;
+end
 % --- Executes on button press in pushbutton3.
 function pushbutton3_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton3 (see GCBO)
@@ -105,15 +140,17 @@ function pushbutton3_Callback(hObject, eventdata, handles)
 
 %% 启动参数样本界面输入页面
 function para_button_Callback(hObject, eventdata, handles)
-GUI2(hObject,handles);%todo等待更新
+% GUI2(hObject,handles);  test
+testInit(hObject,handles);
 handles.input_button.Enable ='on';
-% --- Executes on button press in url_button.
+% --- 设置路径
 function url_button_Callback(hObject, eventdata, handles)
-% hObject    handle to url_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
+global UI;
+outURL =uigetdir();
+if(isempty(outURL)==0)
+    UI.outURL = outURL;
+    handles.output_button.Enable = 'on';
+end
 function gap_edit_Callback(hObject, eventdata, handles)
 % hObject    handle to gap_edit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -136,14 +173,25 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in config_ensure_button.
-function config_ensure_button_Callback(hObject, eventdata, handles)
-% hObject    handle to config_ensure_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
-
+% --- 参数确定按钮
+function config_ensure_button_Callback(hObject, eventdata, h)
+global CONFIG;
+global PAGE;
+global UI;
+CONFIG.height=getValue(h.height_edit,hObject,h);
+CONFIG.width =getValue(h.width_edit,hObject,h);        
+CONFIG.gap=getValue(h.gap_edit,hObject,h);  
+CONFIG.padding=getValue(h.padding_edit,hObject,h);    
+CONFIG.line_spacing=getValue(h.linespacing_edit,hObject,h);        
+CONFIG.text_indent=getValue(h.text_indent_edit,hObject,h);
+CONFIG.Fy = getValue(h.font_size_edit,hObject,h);
+w = CONFIG.width -2*CONFIG.padding;
+CONFIG.Fx=w/double(PAGE.WIDTH);
+CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
+CONFIG.x = CONFIG.padding+1;
+if(UI.perview==1)
+    func_reflow();
+end
 function height_edit_Callback(hObject, eventdata, handles)
 % hObject    handle to height_edit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -258,13 +306,11 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in output_button.
+% --- 重排并输出
 function output_button_Callback(hObject, eventdata, handles)
-% hObject    handle to output_button (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-
+global UI;
+UI.isOutput = 1;
+func_reflow();
 % --- Executes on button press in section_reflow_checkbox.
 function section_reflow_checkbox_Callback(hObject, eventdata, handles)
 % hObject    handle to section_reflow_checkbox (see GCBO)
@@ -281,11 +327,516 @@ global PAGE;
 CONFIG.gap =PARA.GAP;
 CONFIG.padding = 0;
 CONFIG.height = PAGE.HEIGHT;
-CONFIG.width= PAGE.WIDTH*0.50;
+CONFIG.width= PAGE.WIDTH;
 w = CONFIG.width -2*CONFIG.padding;
 CONFIG.Fx=w/double(PAGE.WIDTH);
-CONFIG.Fy=1.5;%todo 默认1
+CONFIG.Fy=1;%todo 默认1
 CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
 CONFIG.x = CONFIG.padding+1;
 CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
 CONFIG.text_indent = PARA.ONE_TAB_WIDTH*CONFIG.Fx*CONFIG.Fy;
+%% 获取edit中的数字
+function i = getValue(obj,hObject,handles)
+str = get(obj,'String');
+if (isempty(str))
+     set(hObject,'String','0')
+     str = '0';
+end
+guidata(hObject, handles);
+i = str2double(str);
+%% 取得当前处理图片集合中的下一张图片
+function func_nextImg()%tag
+global imgs;
+global PAGE;
+global UI;
+UI.isEnd = 0;
+if(iscell(UI.names)==1)
+    n = size(UI.names,2);
+else
+    n = 1;
+end
+if(UI.index>n)
+    UI.isEnd = 1;
+else
+    if(n==1)
+        imgs.o=imread([UI.inURL,UI.names]);
+    else
+        imgs.o = imread([UI.inURL,UI.names{UI.index}]);
+    end
+    imgs.g=imgs.o;
+    if (size(imgs.o,3) ~= 1)
+    imgs.g = func_imgToGray(imgs.o);%转灰度图
+    end
+    imgs.b = func_imgToBin(imgs.g);%二值化
+    imgs.b = func_getThePartOf('binary',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
+    imgs.g = func_getThePartOf('gray',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
+    UI.index=UI.index+1;
+end
+%% 根据左上角坐标和长宽取出图像的一部分
+function[imp]=func_getThePartOf(type,x,y,w,h)
+% 输入
+% type 灰度或者二值图
+% xy 左上角坐标
+% wh 宽和高
+global imgs;
+x=uint64(x);y=uint64(y);w=uint64(w);h=uint64(h);%matlab中似乎没有自动取最大变量类型,预防万一
+switch type
+    case 'gray'
+        imp = imgs.g(y:y+h-1,x:x+w-1);
+    case 'binary'
+        imp = imgs.b(y:y+h-1,x:x+w-1);
+end
+%% 转灰度图
+function[im2]= func_imgToGray(img)
+if (size(img,3) ~= 1)                % 要求输入图像为单通道灰度图像
+    im2        = rgb2gray(img);
+end
+%% 二值化图像
+function[im2]= func_imgToBin(img)
+img            = 255 - img;          
+im2            = double(img);
+%计算trd, 这种trd计算方式,对pdf文档神效
+trd            = 0.5*mean(im2(im2>0)); 
+im2(im2 > trd) = 255;                
+im2(im2 <=trd) = 0;
+im2=uint8(im2);
+%% 执行重排
+function func_reflow()%tag
+global imgs;
+initProperties();% 初始化水平方向和垂直方向的投影,以及行信息和段信息
+func_charsReflow();
+imshow(imgs.output);
+%% 文字回流(重排)
+function func_charsReflow()
+global properties;
+global CONFIG;
+global PARA;
+global PAGE;
+global imgs;
+%新建图像
+s_size = size(properties.section,1);
+imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
+imgs.output = 255-imgs.output;
+x = CONFIG.x;
+y= CONFIG.y;
+p =1;%输出文件的编号
+for i = 1:s_size
+    sp =properties.section(i,:);
+    T = sp(5);
+    %首行缩进
+    if(T~=0)%缩进保留或是缩减两个字符
+        y = floor(y+CONFIG.Fx*PAGE.WIDTH*sp(5));
+    else
+        y = floor(y+CONFIG.text_indent);%todo 提供设置
+    end
+    if(sp(6)==1)%如果是图片段
+        if(CONFIG.height-CONFIG.padding < x+sp(4)*CONFIG.Fx)%另起一页
+            %         figure;imshow(imgs.output);title('section reflow');
+            [x,~,p]=func_newPage(p);
+        end
+        [x,y]=func_append(x,y,sp(1:4),'section');
+    else
+        %遍历每个字符
+        for row =sp(7):sp(8)%遍历每一行
+            chars = properties.charsAtRows{row};
+            c_size = size(chars,1);
+            for n = 1:c_size%遍历所有字符
+                %换行或换页
+                if(y+chars(n,3)*CONFIG.Fx*CONFIG.Fy > CONFIG.width-CONFIG.padding)%是否需要换行
+                    [x,y] = func_newline(x,y,chars(n,4)*CONFIG.Fx*CONFIG.Fy);
+                    x = ceil(x+ CONFIG.line_spacing);
+                end
+                if(CONFIG.height-CONFIG.padding < x+chars(n,4)*CONFIG.Fx*CONFIG.Fy)%另起一页
+                    [x,y,p]=func_newPage(p);
+                end
+                %非首行是否缩进保留
+                if(y==CONFIG.y&&T~=0)% 新的一行,需不需要缩进保留
+                    y = floor(y+CONFIG.Fx*PAGE.WIDTH*sp(5));
+                    y = floor(y+PARA.ONE_CHAR_WIDTH*CONFIG.Fx*CONFIG.Fy);%再额外缩进一个字符
+                end
+                [x,y]=func_append(x,y,chars(n,1:4),'char');
+            end
+        end
+    end
+    % 换行, 图片换行以及段换行, 解决行距问题
+    if(sp(6)==1)
+        [x,y]=func_newline(x,y,sp(4)*CONFIG.Fx);
+        x = floor(x+CONFIG.line_spacing*0.5);
+    else%换行换的是最后一行的高度
+        h = properties.allRows(sp(8),2)-properties.allRows(sp(8),1)-1;
+        [x,y]=func_newline(x,y,h*CONFIG.Fx*CONFIG.Fy);
+        x = ceil(x+ CONFIG.line_spacing);
+    end
+end
+%% 另起一页
+function[x,y,p] = func_newPage(p)
+global imgs;
+global CONFIG;
+global UI;
+if(UI.isOutput==1)
+    func_save(UI.outURL,strcat('p',num2str(p)),'jpg');
+end
+p= p+1;
+imgs.output = uint8(zeros(CONFIG.height,CONFIG.width));
+imgs.output = 255-imgs.output;
+x=CONFIG.x;
+y=CONFIG.y;
+%% 将矩阵保存为图片
+function func_save(url,name,type)
+global imgs;
+% 文件,地址, 文件名, 保存类型
+if(url(length(url))=='/')
+    url(length(url))=[];
+end
+imwrite(imgs.output,strcat(url,'/',name,'.',type),type);
+%% 将图片的小部分添加到输出图片中
+function[x,y]=func_append(x,y,position,type)
+% @输入
+% x,y为光标左上角坐标
+% position[sx,sy,sw,sh]代表欲加图片的左上角坐标和宽高
+% type为添加类型(文字或者段落)
+% @return
+% x,y, 添加图片后新光标位置
+global CONFIG;
+global imgs;
+%!!!注意,properties.section里因为涉及到左上角x,y坐标,所以x是图片的x轴,即横轴,因此要倒过来用
+sx=position(2);sy=position(1);sw=position(3);sh=position(4);
+%线性缩放
+switch type
+    case 'section'
+        imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),CONFIG.Fx);
+        % imrs = imgs.g(sx:(sx+sh-1),sy:(sy+sw-1));
+        [sh,sw]=size(imrs);
+        imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
+        x =x;
+        y=y+sw;
+    case 'char'
+        imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),CONFIG.Fx*CONFIG.Fy);
+        [sh,sw]=size(imrs);
+        imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
+        x =x;
+        y = ceil(y+sw+CONFIG.gap);
+end
+%% 根据传入高度换行返回新的坐标
+function[x,y]=func_newline(x,~,height)
+global CONFIG;
+y= CONFIG.y;
+x=x+height;
+
+%% 初始化水平方向和垂直方向的投影,以及行信息和段信息
+function initProperties()
+global imgs;
+global properties;
+global projection;
+% figure;imshow(imgs.b);
+% figure;imshow(func_getThePartOf(PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT));
+projection.ver = func_projectTo(imgs.b,'vercial');%投影到垂直方向
+% figure;plot(projection.ver,1:length(projection.ver));title('垂直方向像素');set(gca,'ydir','reverse');
+getRowProperty();
+% func_showDivisiveImg(properties.allRows,'line');%显示行切割
+getRowsProjection();%获得每一行水平方向的投影,保存到projection.allRows
+getSectionProperty();%获得段切割信息
+% func_showDivisiveImg(properties.section,'rectangle');%显示段切割
+getCharsProperty();
+%% 获得每个字符的信息
+function getCharsProperty()
+global properties;
+s = size(properties.section,1);
+for i =1:s
+    sp =properties.section(i,:);
+    for row = sp(7):sp(8)
+        if(sp(6)~=1)
+           split(row);
+        end
+    end
+end
+%% 对第row行进行切割
+function split(row)
+global projection;
+global properties;
+
+global PARA;
+% showRow(row);
+temp = uint8(projection.allRows{row});
+c = size(temp,2);
+
+%% 输入
+% 行投影(改255,0),行信息
+result = zeros(1, c);
+%获得字符左右边界[闭区间]
+index = 1;
+for y = 1 : c - 1
+    if (temp(1, y) == 0 && temp(1, y + 1) == 255)
+        result(1, index) = y + 1;
+        index = index + 1;
+    elseif (temp(1, y) == 255 && temp(1, y + 1) == 0)
+        result(1, index) = y;
+        index = index + 1;
+    end
+end
+
+result(index : c) = [];
+result = fixChars(result);
+
+[~, c] = size(result);
+index = 2;
+while (index < c)%英文字符之类的合并
+    if (result(1, index) - result(1, index - 1) <= PARA.GAP)
+        result(index - 1 : index) = [];
+        c = c - 2;
+    end
+    index = index + 1;
+end
+%% 输出
+% result 每对元素标记字符的左右边界
+% 转换为charProperty
+n = size(result,2);
+properties.charsAtRows{row}=zeros(n/2,4);
+c = 1;
+for i=1:2:n-1
+    x = result(i);
+    y = properties.allRows(row,1);
+    w = result(i+1)-x+1;
+    h = properties.allRows(row,2)-properties.allRows(row,1)-1;
+    properties.charsAtRows{row}(c,:)=[x,y,w,h];
+    c=c+1;
+end
+% func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
+
+%% 修复字符之间的断裂, 比如说 如 比
+function[arr] = fixChars(arr)
+global PARA;
+
+%% 输入
+% 标准字符宽度
+% 合并，例如  如  即  这些字
+[~, c] = size(arr);
+x = 2;
+while (x < c - 2)%合并可以改进
+    if (arr(1, x) - arr(1, x - 1) < PARA.ONE_CHAR_WIDTH*0.6)
+         if (arr(1, x + 2) - arr(1, x + 1) < PARA.ONE_CHAR_WIDTH*0.6)
+            if(arr(1,x+1)-arr(1,x)<2*PARA.GAP)
+               arr(x : x + 1) = [];
+                 c = c - 2;
+            end
+         end
+    end
+    x = x + 2;
+end
+
+%% 图像中显示各种分割线
+function  func_showDivisiveImg(properties,type)
+% 输入
+% img            输入图像
+% properties  图像相关的分割信息
+% type           显示类型
+global PAGE;
+% [M,N,O]=size(img);
+n = size(properties,1);
+switch type
+    case 'line'
+        line([PAGE.LX,PAGE.RX],[properties(:,1),properties(:,1)]);
+        line([PAGE.LX,PAGE.RX],[properties(:,2),properties(:,2)]);
+    case 'rectangle'
+        %rectangle('Position',temp,'LineWidth',2,'LineStyle','-','edgecolor','b')
+        if(size(properties,2)==8)%段落
+            for i=1:n
+                color ='g';
+                if(properties(i,6)~=0)
+                   color = 'r';
+                elseif(properties(i,5)~=0)
+                   color = 'b';
+                end
+                position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
+                rectangle('Position',position,'edgecolor',color);
+            end
+        else
+             for i=1:n%字符
+                position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
+                rectangle('Position',position,'edgecolor','g');
+            end
+        end
+end
+%% 计算行行首空格数
+function [head_blank,tail_blank]=trim(row)
+%todo debug hor取的是截取后的,而hb访问的却是全图的因此会出错
+global projection;%每一行的水平投影
+
+hor = projection.allRows{row};
+head_blank =1;
+% showRow(1);
+% if(row==31)
+%     row
+% end
+while(hor(head_blank)==0)
+    head_blank=1+head_blank;
+end
+head_blank = head_blank-1;
+i = size(hor,2);
+while(hor(i)==0)
+    i=i-1;
+end
+tail_blank=i+1;
+%% 把行中合并成段,图片自成一段
+function getSectionProperty()
+% s段落数
+% properties.section: 段信息
+%---------- 它是一个s行8列数组,结构如下
+%----------  [x,y,w,h,T,P,from,to]
+%----------  分别是
+%----------  position   :  x,y,w,h 左上角坐标,宽高
+%----------  flag          :  T 缩进保留   P 是否图片
+%----------  from-to    :  from  启始行      to 结束行
+global PAGE;
+global PARA;
+global properties;
+row =size(properties.allRows,1);
+s = 1;
+properties.section = zeros(row,8);
+last_blank = 0;
+for i = 1:row     
+%     if(i == 3)
+%          showRow(i);
+% %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
+%      end
+    [head_blank,tail_blank] = trim(i);%计算开头的空白长度
+    x = head_blank+1;
+    y= properties.allRows(i,1)+1;
+    h = properties.allRows(i,2)-properties.allRows(i,1)-1;
+    w=tail_blank-head_blank-1;
+    if(isImgSection(i,x,y,w,h)==1)%是否为图片段
+        properties.section(s,:)=[x,y,w,h,head_blank/PAGE.WIDTH,1,i,i];%新建一段
+        s=s+1;
+    else%非图片段
+        if(head_blank-PAGE.SAFE> PARA.ONE_CHAR_WIDTH)%大于一个标准字符大小
+            properties.section(s,:)=[x,y,w,h,0,0,i,i];%认为是新的一段
+            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.3)%大于一个标准缩进值
+                properties.section(s,5)=head_blank/PAGE.WIDTH;%计算它相对缩减值
+            end
+            s=s+1;
+        else%无空格, 那么这一行和上一段合并
+            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片
+                properties.section(s, :)=[x,y,w,h, head_blank/PAGE.WIDTH, 0, i, i];
+                s=s+1;
+            else%非图片,合并
+                %宽度的更新
+                if(last_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
+                    properties.section(s-1,3)=properties.section(s-1,3)+last_blank-head_blank;
+                end
+                if(w>properties.section(s-1,3))%更新成最大的
+                    properties.section(s-1,3)=w;
+                end
+                properties.section(s-1,5)=0;%计算它相对缩减值
+                properties.section(s-1,1) = min([x,properties.section(s-1,1)]);%x的更新,更新成最小的
+                properties.section(s-1, 4)=properties.allRows(i,2)-properties.section(s-1,2);
+                properties.section(s-1,8) = i;
+            end
+        end
+    end
+    last_blank = head_blank;
+end
+properties.section(s:end,:)=[];
+% s=s-1;
+
+%% 获得每一行水平方向的投影,保存到projection.allRows
+function getRowsProjection()
+global PAGE;
+global projection;
+global properties;
+row = size(properties.allRows,1);
+projection.allRows = cell(1,row);
+for i = 1:row
+    h = properties.allRows(i,2)-properties.allRows(i,1)-1;
+    imp = func_getThePartOf('binary',1,properties.allRows(i,1)+1,PAGE.WIDTH,h);
+    projection.allRows{i}=func_projectTo(imp,'horizontal');
+end
+
+%% 从垂直投影中获得行信息
+function getRowProperty()
+% properties.allRows 为每行的上下边界的位置
+%                      它的结构为[up, buttom], 即第x行, 上边界为up,下边界为buttom
+global projection;
+global properties;
+row = 0;
+len = size(projection.ver,1);
+properties.allRows=zeros(len,2);
+i = 1;
+while (i<=len)
+    if (projection.ver(i)~=0)
+        row = row+1;
+        properties.allRows(row,1)=i-1;
+        while(projection.ver(i)~=0&&i<len) 
+            i=i+1;
+        end;
+        properties.allRows(row,2)=i;
+    end
+    i=i+1;
+end
+properties.allRows(row+1:end,:)=[];
+% tmp =properties.allRows(:,2)-properties.allRows(:,1);
+% idx = tmp<7;去躁点或者定筛选值???无需再考虑
+% properties.allRows(idx,:)=[];
+%% 水平方向或垂直方向的投影
+function[arr]=func_projectTo(img,type)
+% @输入
+% imb    图像
+% type   投影类型
+% @返回
+% arr      投影结果
+if(strcmp(type,'horizontal'))
+    arr =sum(img(:,:));
+else
+    img = img';
+    arr = sum(img(:,:));
+    arr=arr';
+end
+%% 判断某一行是否为图片
+function [flag] =isImgSection(idx,x,~,~,h)
+global PARA;
+global projection;
+flag = 0;
+hor = projection.allRows{idx};
+%从行的高度判断
+if(h>PARA.ONE_ROW_HEIGHT*1.5) 
+    flag = 1;
+else
+%     figure;imshow(func_getThePartOf('binary',x,y,w,h));
+    hor = hor(1,x:x+size(PARA.TFTOOL,2)-1);
+    tmp =and(hor,PARA.TFTOOL);
+    blank = find(tmp==0);
+    if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
+        flag=1;
+    end
+end
+
+
+
+function font_size_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to font_size_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of font_size_edit as text
+%        str2double(get(hObject,'String')) returns contents of font_size_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function font_size_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to font_size_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in show_division_checkbox.
+function show_division_checkbox_Callback(hObject, eventdata, handles)
+% hObject    handle to show_division_checkbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of show_division_checkbox
