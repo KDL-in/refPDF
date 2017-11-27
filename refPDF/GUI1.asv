@@ -102,6 +102,8 @@ UI.isOutput = 0;
 UI.isEnd = 0;
 UI.perview =0;
 imgs.p=1;
+imgs.y 
+imgs.x 
 initCONFIG();
 %打开图片
 [filename, pathname, filterindex] = uigetfile({'*.PNG;*.jpg;*.tif',...
@@ -179,7 +181,9 @@ end
 function config_ensure_button_Callback(hObject, eventdata, h)
 global CONFIG;
 global PAGE;
+global imgs;
 global UI;
+imgs.perview=[];
 CONFIG.height=getValue(h.height_edit,hObject,h);
 CONFIG.width =getValue(h.width_edit,hObject,h);        
 CONFIG.gap=getValue(h.gap_edit,hObject,h);  
@@ -316,9 +320,9 @@ UI.isOutput = 1;
 imgs.p=1;
 while(UI.isEnd==0)
     func_reflow();
-    func_newPage();
-    func_nextImg();%cur
+    func_nextImg();
 end
+func_newPage()
 handles.output_button.Enable ='off';
 handles.url_button.Enable ='off';
 % --- Executes on button press in section_reflow_checkbox.
@@ -415,7 +419,7 @@ function func_reflow()
 global imgs;
 initProperties();% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 func_charsReflow();
-imshow(imgs.output);
+imshow(imgs.perview);
 %% 文字回流(重排) cur
 function func_charsReflow()
 global properties;
@@ -425,10 +429,12 @@ global PAGE;
 global imgs;
 %新建图像
 s_size = size(properties.section,1);
-imgs.output = uint8(zeros(ceil(CONFIG.height),ceil(CONFIG.width)));
-imgs.output = 255-imgs.output;
-x = CONFIG.x;
-y= CONFIG.y;
+% imgs.output = uint8(zeros(ceil(CONFIG.height),ceil(CONFIG.width)));
+% imgs.output = 255-imgs.output;
+% x = CONFIG.x;
+% y= CONFIG.y;
+x = imgs.x;%上一次保留的x y
+y = imgs.y;
 p =1;%输出文件的编号
 for i = 1:s_size
     sp =properties.section(i,:);
@@ -468,6 +474,7 @@ for i = 1:s_size
             end
         end
     end
+
     % 换行, 图片换行以及段换行, 解决行距问题
     if(sp(6)==1)
         [x,y]=func_newline(x,y,sp(4)*CONFIG.Fx);
@@ -478,11 +485,16 @@ for i = 1:s_size
         x = ceil(x+ CONFIG.line_spacing);
     end
 end
+ imgs.x = x;
+ imgs.y = y;
 %% 另起一页
 function[x,y] = func_newPage()
 global imgs;
 global CONFIG;
 global UI;
+if(isempty(imgs.perview)==1)
+    imgs.perview = imgs.output;
+end
 if(UI.isOutput==1)
     func_save(UI.outURL,strcat('p',num2str(imgs.p)),'jpg');
     imgs.p= imgs.p+1;
@@ -510,7 +522,7 @@ function[x,y]=func_append(x,y,position,type)
 global CONFIG;
 global imgs;
 %!!!注意,properties.section里因为涉及到左上角x,y坐标,所以x是图片的x轴,即横轴,因此要倒过来用
-sx=position(2);sy=position(1);sw=position(3);sh=position(4);
+sx=uint16(ceil(position(2)));sy=uint16(ceil(position(1)));sw=uint16(ceil(position(3)));sh=uint16(ceil(position(4)));
 %线性缩放
 switch type
     case 'section'
@@ -520,7 +532,7 @@ switch type
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
         x =x;
         y=y+sw;
-    case 'char'
+    case 'char'%sx=0? 第10张有bug
         imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),CONFIG.Fx*CONFIG.Fy);
         [sh,sw]=size(imrs);
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
@@ -704,7 +716,7 @@ s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
 for i = 1:row     
-%     if(i == 3)
+%     if(i == row)
 %          showRow(i);
 % %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %      end
@@ -719,13 +731,14 @@ for i = 1:row
     else%非图片段
         if(head_blank-PAGE.SAFE> PARA.ONE_CHAR_WIDTH)%大于一个标准字符大小
             properties.section(s,:)=[x,y,w,h,0,0,i,i];%认为是新的一段
-            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.3)%大于一个标准缩进值
+            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.4)%大于一个标准缩进值update 英文的话这里可能要改
                 properties.section(s,5)=head_blank/PAGE.WIDTH;%计算它相对缩减值
+%                 showRow(i);
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片
-                properties.section(s, :)=[x,y,w,h, head_blank/PAGE.WIDTH, 0, i, i];
+            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
+                properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;
             else%非图片,合并
                 %宽度的更新
@@ -745,7 +758,6 @@ for i = 1:row
     last_blank = head_blank;
 end
 properties.section(s:end,:)=[];
-% s=s-1;
 
 %% 获得每一行水平方向的投影,保存到projection.allRows
 function getRowsProjection()
@@ -766,6 +778,7 @@ function getRowProperty()
 %                      它的结构为[up, buttom], 即第x行, 上边界为up,下边界为buttom
 global projection;
 global properties;
+global PARA;
 row = 0;
 len = size(projection.ver,1);
 properties.allRows=zeros(len,2);
@@ -782,7 +795,11 @@ while (i<=len)
     i=i+1;
 end
 properties.allRows(row+1:end,:)=[];
-% tmp =properties.allRows(:,2)-properties.allRows(:,1);
+%去躁点或者定筛选值???无需再考虑
+%需要考虑, 有亮点存在update
+tmp =properties.allRows(:,2)-properties.allRows(:,1);
+idx = tmp<PARA.ONE_ROW_HEIGHT*0.1;
+properties.allRows(idx,:)=[];% tmp =properties.allRows(:,2)-properties.allRows(:,1);
 % idx = tmp<7;去躁点或者定筛选值???无需再考虑
 % properties.allRows(idx,:)=[];
 %% 水平方向或垂直方向的投影
@@ -806,7 +823,7 @@ global projection;
 flag = 0;
 hor = projection.allRows{idx};
 %从行的高度判断
-if(h>PARA.ONE_ROW_HEIGHT*1.5) 
+if(h>PARA.ONE_ROW_HEIGHT*1.7) 
     flag = 1;
 else
 %     figure;imshow(func_getThePartOf('binary',x,y,w,h));

@@ -253,7 +253,6 @@ pos = [1,1,size(imgs.b,2),size(imgs.b,1)];
 pos=getPosition(handles.h);%图中就会出现可以拖动以及改变大小的矩形框，选好位置后：
 pos=uint16(pos);%pos有四个值，分别是矩形框的左下角点的坐标 x y 和 框的 宽度和高度
 %注意上面是图像的x,y, 下面矩阵要用应该交换一下
-
 PAGE.SAFE =10;
  %  宽度
 hor = func_projectTo(imgs.b,'horizontal');
@@ -277,12 +276,13 @@ PAGE.DY=pos(2)+pos(4)-1;
 while(ver(PAGE.UY)==0) 
     PAGE.UY=PAGE.UY+1;
 end;
-while(ver(PAGE.DY)==0) 
-    PAGE.DY=PAGE.DY-1;
-end;
+% while(ver(PAGE.DY)==0) 
+%     PAGE.DY=PAGE.DY-1;
+% end;
 PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
-PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域
+% PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域 %update下边不该trim
 PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
+
 %划出感兴趣区域后, imgs中更新
 imgs.b = func_getThePartOf('binary',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
 imgs.g = func_getThePartOf('gray',PAGE.LX,PAGE.UY,PAGE.WIDTH,PAGE.HEIGHT);
@@ -374,7 +374,10 @@ while(i<PAGE.WIDTH)
     i=i+1;
 end
 tmp(num:end)=[];
-PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
+avg = mean(tmp);
+%取中位三分之一可能能容易取到英文,因此利用平均值筛选掉低数值求平均tag
+PARA.ONE_CHAR_WIDTH = mean(tmp(tmp>avg));%update
+% PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
 %PARA.ONE_TAB_WIDTH
 PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
 %PARA.ROW_properties.allRows_SPACING

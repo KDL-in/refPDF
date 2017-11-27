@@ -31,6 +31,7 @@ global imgs;%灰度图像
 %--imgs.b 二值图像
 %--imgs.output 输出图像
 %--p 输出页面的序号
+%--x,y用户保留上一页重排最后的xy
 global properties;
 % properties是行分割,段分割的相关信息, 包含
 %--allRows:  行信息
@@ -413,13 +414,13 @@ for i = 1:row
     else%非图片段
         if(head_blank-PAGE.SAFE> PARA.ONE_CHAR_WIDTH)%大于一个标准字符大小
             properties.section(s,:)=[x,y,w,h,0,0,i,i];%认为是新的一段
-            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.4)%大于一个标准缩进值update
+            if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.4)%大于一个标准缩进值 英文的话这里可能要改
                 properties.section(s,5)=head_blank/PAGE.WIDTH;%计算它相对缩减值
 %                 showRow(i);
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
+            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片
                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;
             else%非图片,合并
@@ -553,7 +554,7 @@ end
 tmp(num:end)=[];
 avg = mean(tmp);
 %取中位三分之一可能能容易取到英文,因此利用平均值筛选掉低数值求平均tag
-PARA.ONE_CHAR_WIDTH = mean(tmp(tmp>avg));%update
+PARA.ONE_CHAR_WIDTH = mean(tmp(tmp>avg));
 % PARA.ONE_CHAR_WIDTH = ceil(func_getStatistcalAVG(tmp));
 %PARA.ONE_TAB_WIDTH
 PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
@@ -639,7 +640,7 @@ end;
 %     PAGE.DY=PAGE.DY-1;
 % end;
 PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
-% PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域 %update下边不该trim
+% PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域 %下边不该trim
 PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
@@ -698,7 +699,7 @@ while (i<=len)
 end
 properties.allRows(row+1:end,:)=[];
 %去躁点或者定筛选值???无需再考虑
-%需要考虑, 有亮点存在update
+%需要考虑, 有亮点存在
 tmp =properties.allRows(:,2)-properties.allRows(:,1);
 idx = tmp<PARA.ONE_ROW_HEIGHT*0.1;
 properties.allRows(idx,:)=[];
