@@ -42,8 +42,6 @@ else
     gui_mainfcn(gui_State, varargin{:});
 end
 % End initialization code - DO NOT EDIT
-
-
 % --- Executes just before GUI1 is made visible.
 function GUI1_OpeningFcn(hObject, eventdata, handles, varargin)
 
@@ -53,11 +51,8 @@ handles.output = hObject;
 % handles.input_button.Enable ='on';
 % Update handles structure
 guidata(hObject, handles);
-
 % UIWAIT makes GUI1 wait for user response (see UIRESUME)
 % uiwait(handles.figure1);
-
-
 % --- Outputs from this function are returned to the command line.
 function varargout = GUI1_OutputFcn(hObject, eventdata, handles) 
 % varargout  cell array for returning output args (see VARARGOUT);
@@ -69,24 +64,7 @@ function varargout = GUI1_OutputFcn(hObject, eventdata, handles)
 varargout{1} = handles.output;
 
 
-%% 测试用方法, 读入数据
-function testInit(obj,h)
-h.PAGE.SAFE = 10;
-h.PAGE.LX = 174;
-h.PAGE.RX = 1398;
-h.PAGE.WIDTH = 1224;
-h.PAGE.UY = 184;
-h.PAGE.DY = 1706;
-h.PAGE.HEIGHT = 1521;
-h.PAGE.SAFE = 10;
-h.PAGE.SAFE = 10;
-h.PARA.ONE_ROW_HEIGHT = 29;
-h.PARA.ONE_CHAR_WIDTH = 29;
-h.PARA.ONE_TAB_WIDTH =58;
-h.PARA.LINE_SPACING =20;
-h.PARA.GAP = 2.5625;
-h.PARA.TFTOOL=ones(1,101);
-guidata(obj, h);
+%% GUI回调函数
 % ---输入图片
 function input_button_Callback(hObject, eventdata, h)
 global PAGE;
@@ -137,14 +115,8 @@ if (get(handles.perview_checkbox,'Value')==1)
 else
     UI.perview = 0;
 end
-% --- Executes on button press in pushbutton3.
-function pushbutton3_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton3 (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-
-%% 启动参数样本界面输入页面
+%--- 启动参数样本界面输入页面
 function para_button_Callback(hObject, eventdata, handles)
 GUI2(hObject,handles);  %test
 % testInit(hObject,handles);
@@ -157,34 +129,13 @@ if(isempty(outURL)==0)
     UI.outURL = outURL;
     handles.output_button.Enable = 'on';
 end
-function gap_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to gap_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of gap_edit as text
-%        str2double(get(hObject,'String')) returns contents of gap_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function gap_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to gap_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
 % --- 参数确定按钮
 function config_ensure_button_Callback(hObject, eventdata, h)
 global CONFIG;
 global PAGE;
 global imgs;
 global UI;
+[imgs.x,imgs.y]=func_newPage();
 imgs.perview=[];
 CONFIG.height=getValue(h.height_edit,hObject,h);
 CONFIG.width =getValue(h.width_edit,hObject,h);        
@@ -201,141 +152,6 @@ if(UI.perview==1)
     func_reflow();
     h.show_division_button.Enable='on';
 end
-function height_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to height_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of height_edit as text
-%        str2double(get(hObject,'String')) returns contents of height_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function height_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to height_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function width_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to width_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of width_edit as text
-%        str2double(get(hObject,'String')) returns contents of width_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function width_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to width_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function padding_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to padding_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of padding_edit as text
-%        str2double(get(hObject,'String')) returns contents of padding_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function padding_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to padding_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function linespacing_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to linespacing_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of linespacing_edit as text
-%        str2double(get(hObject,'String')) returns contents of linespacing_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function linespacing_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to linespacing_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-
-function text_indent_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to text_indent_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of text_indent_edit as text
-%        str2double(get(hObject,'String')) returns contents of text_indent_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function text_indent_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to text_indent_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
-
-function font_size_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to font_size_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of font_size_edit as text
-%        str2double(get(hObject,'String')) returns contents of font_size_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function font_size_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to font_size_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
-end
-
 
 % --- 显示切割信息按钮
 function show_division_button_Callback(hObject, eventdata, handles)
@@ -346,7 +162,9 @@ func_showDivisiveImg(properties.section,'rectangle');
 s = size(properties.section,1);
 for i =1:s
     for j= properties.section(i,7):properties.section(i,8)
-        func_showDivisiveImg(properties.charsAtRows{j},'rectangle');
+        if(properties.section(i,6)~=1)
+            func_showDivisiveImg(properties.charsAtRows{j},'rectangle');
+        end
     end   
 end
 
@@ -356,6 +174,7 @@ global UI;
 global imgs;
 UI.isOutput = 1;
 imgs.p=1;
+[imgs.x,imgs.y]=func_newPage();
 while(UI.isEnd==0)
     func_reflow();
     func_nextImg();
@@ -364,13 +183,8 @@ func_newPage()
 handles.output_button.Enable ='off';
 handles.url_button.Enable ='off';
 % --- Executes on button press in section_reflow_checkbox.
-function section_reflow_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to section_reflow_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of section_reflow_checkbox
-%% my function
+%% 自定义函数
 %% 初始化 用户配置参数
 function initCONFIG()
 global CONFIG;
@@ -505,7 +319,7 @@ for i = 1:s_size
                 %非首行是否缩进保留
                 if(y==CONFIG.y&&T~=0)% 新的一行,需不需要缩进保留
                     y = floor(y+CONFIG.Fx*PAGE.WIDTH*sp(5));
-                    y = floor(y+PARA.ONE_CHAR_WIDTH*CONFIG.Fx*CONFIG.Fy);%再额外缩进一个字符
+%                     y = floor(y+PARA.ONE_CHAR_WIDTH*CONFIG.Fx*CONFIG.Fy);%再额外缩进一个字符
                 end
                 [x,y]=func_append(x,y,chars(n,1:4),'char');
             end
@@ -778,9 +592,9 @@ s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
 for i = 1:row     
-%     if(i == row)
+%     if(i == 21)
 %          showRow(i);
-% %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
+% % %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %      end
     [head_blank,tail_blank] = trim(i);%计算开头的空白长度
     x = head_blank+1;
@@ -841,29 +655,42 @@ function getRowProperty()
 global projection;
 global properties;
 global PARA;
-row = 0;
-len = size(projection.ver,1);
-properties.allRows=zeros(len,2);
-i = 1;
-while (i<=len)
-    if (projection.ver(i)~=0)
-        row = row+1;
-        properties.allRows(row,1)=i-1;
-        while(projection.ver(i)~=0&&i<len) 
-            i=i+1;
-        end;
-        properties.allRows(row,2)=i;
-    end
-    i=i+1;
-end
-properties.allRows(row+1:end,:)=[];
+% row = 0;
+% len = size(projection.ver,1);
+% 
+% properties.allRows=zeros(len,2);
+% i = 1;
+% while (i<=len)
+%     if (projection.ver(i)~=0)
+%         row = row+1;
+%         properties.allRows(row,1)=i-1;
+%         while(projection.ver(i)~=0&&i<len) 
+%             i=i+1;
+%         end;
+%         properties.allRows(row,2)=i;
+%     end
+%     i=i+1;
+% end
+% properties.allRows(row+1:end,:)=[];
+[left,right]=func_getEdge(projection.ver','行');
+% properties.allRows(:,1)=left(:)-1;
+% properties.allRows(:,2) =right(:);
 %去躁点或者定筛选值???无需再考虑
 %需要考虑, 有亮点存在update todo 再考虑ver
-tmp =properties.allRows(:,2)-properties.allRows(:,1);
-idx = tmp<PARA.ONE_ROW_HEIGHT*0.1;
-properties.allRows(idx,:)=[];% tmp =properties.allRows(:,2)-properties.allRows(:,1);
-% idx = tmp<7;去躁点或者定筛选值???无需再考虑
-% properties.allRows(idx,:)=[];
+w =right-left;
+idx =w<PARA.ONE_ROW_HEIGHT*0.1;
+n =size(idx,2);
+for i=1:n
+    if(idx(i)&&sum(projection.ver(left(i):right(i)))>255*PARA.ONE_TAB_WIDTH*2)
+        idx(i)=0;
+    end
+end
+right(idx) =[];
+left(idx) =[];
+properties.allRows=zeros(size(left,2),2);
+properties.allRows(:,1)=left(:)-1;
+properties.allRows(:,2) =right(:);
+
 %% 水平方向或垂直方向的投影
 function[arr]=func_projectTo(img,type)
 % @输入
@@ -893,7 +720,8 @@ else
     hor = hor(1,x:len);
     tmp =and(hor,PARA.TFTOOL);
     blank = find(tmp==0);
-    if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
+%     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)%tag
+    if(length(blank)<PARA.GAP)
         flag=1;
     end
 end
@@ -923,3 +751,189 @@ y= properties.allRows(i,1)+1;
 h = properties.allRows(i,2)-properties.allRows(i,1)-1;
 w=size(imgs.b,2);
 figure;imshow(func_getThePartOf('binary',x,y,w,h));
+%% 测试用方法, 读入数据
+function testInit(obj,h)
+h.PAGE.SAFE = 10;
+h.PAGE.LX = 174;
+h.PAGE.RX = 1398;
+h.PAGE.WIDTH = 1224;
+h.PAGE.UY = 184;
+h.PAGE.DY = 1706;
+h.PAGE.HEIGHT = 1521;
+h.PAGE.SAFE = 10;
+h.PAGE.SAFE = 10;
+h.PARA.ONE_ROW_HEIGHT = 29;
+h.PARA.ONE_CHAR_WIDTH = 29;
+h.PARA.ONE_TAB_WIDTH =58;
+h.PARA.LINE_SPACING =20;
+h.PARA.GAP = 2.5625;
+h.PARA.TFTOOL=ones(1,101);
+guidata(obj, h);
+
+%% 没用的方法
+
+function gap_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to gap_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+% --- Executes on button press in pushbutton3.
+function pushbutton3_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of gap_edit as text
+%        str2double(get(hObject,'String')) returns contents of gap_edit as a double
+
+% --- Executes during object creation, after setting all properties.
+function gap_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to gap_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function height_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to height_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of height_edit as text
+%        str2double(get(hObject,'String')) returns contents of height_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function height_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to height_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function width_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to width_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of width_edit as text
+%        str2double(get(hObject,'String')) returns contents of width_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function width_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to width_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function padding_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to padding_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of padding_edit as text
+%        str2double(get(hObject,'String')) returns contents of padding_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function padding_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to padding_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function linespacing_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to linespacing_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of linespacing_edit as text
+%        str2double(get(hObject,'String')) returns contents of linespacing_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function linespacing_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to linespacing_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function text_indent_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to text_indent_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of text_indent_edit as text
+%        str2double(get(hObject,'String')) returns contents of text_indent_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function text_indent_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to text_indent_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+function font_size_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to font_size_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of font_size_edit as text
+%        str2double(get(hObject,'String')) returns contents of font_size_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function font_size_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to font_size_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+function section_reflow_checkbox_Callback(hObject, eventdata, handles)
+% hObject    handle to section_reflow_checkbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of section_reflow_checkbox

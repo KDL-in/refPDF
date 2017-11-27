@@ -280,7 +280,7 @@ end;
 %     PAGE.DY=PAGE.DY-1;
 % end;
 PAGE.UY = PAGE.UY-PAGE.SAFE;%上下左右的安全区域
-% PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域 %update下边不该trim
+PAGE.DY = PAGE.DY+PAGE.SAFE;%上下左右的安全区域 %上下边不该trim
 PAGE.HEIGHT=double(PAGE.DY-PAGE.UY-1);
 
 %划出感兴趣区域后, imgs中更新
@@ -346,7 +346,7 @@ ver = func_projectTo(imgs.b,'vertical');
 %     i=i+1;
 % end
 % rp(row+1:end,:)=[];
-[left,right]= getEdge(ver','段落');%求出所有段的边界坐标
+[left,right]= func_getEdge(ver','段落');%求出所有段的边界坐标
 
 % 中间三分之一求平均值法
 % PARA.ONE_ROW_HEIGHT
@@ -375,7 +375,7 @@ hor = func_projectTo(func_getThePartOf('binary',1,left(i),PAGE.WIDTH,tmp(i)),'ho
 %     i=i+1;
 % end
 % tmp(num:end)=[];
-[left,right] = getEdge(hor,'字符');
+[left,right] = func_getEdge(hor,'字符');
 tmp= right-left;
 avg = mean(tmp);
 %取中位三分之一可能能容易取到英文,因此利用平均值筛选掉低数值求平均tag
@@ -389,7 +389,7 @@ PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
 % for i = 2:row
 %     tmp(i-1)=rp(i,1)-rp(i-1,2);
 % end
-[left,right]=getEdge(ver','空格');
+[left,right]=func_getEdge(ver','空格');
 tmp = right-left;
 PARA.LINE_SPACING = floor(func_getStatistcalAVG(tmp));
 % PARA.GAP 统计字体间距
@@ -417,7 +417,7 @@ PARA.LINE_SPACING = floor(func_getStatistcalAVG(tmp));
 %     i=i+1;
 % end
 % tmp(num:end)=[];
-[left,right] = getEdge(hor,'空格');%cur
+[left,right] = func_getEdge(hor,'空格');%cur
 tmp = right-left;
 avg = mean(tmp);
 %取中位三分之一可能能容易取到英文,因此利用平均值筛选掉高低数值求平均
@@ -425,7 +425,7 @@ PARA.GAP = mean(tmp(tmp>0.3*avg & tmp<0.7*avg));
 % TFTOOL 检测小工具
 PARA.TFTOOL = uint8(ones(1,floor(PARA.ONE_CHAR_WIDTH*3.5)));
 %% 取得连续1或连续0的左右坐标
-function[left,right]=getEdge(arr,type)%tag
+function[left,right]=func_getEdge(arr,type)%tag
 len = size(arr,2);
 A = zeros(1,len+1);
 B = zeros(1,len+1);
