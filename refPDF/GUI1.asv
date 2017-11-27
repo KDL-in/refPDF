@@ -22,7 +22,7 @@ function varargout = GUI1(varargin)
 
 % Edit the above text to modify the response to help GUI1
 
-% Last Modified by GUIDE v2.5 26-Nov-2017 20:07:28
+% Last Modified by GUIDE v2.5 27-Nov-2017 15:06:11
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -98,13 +98,14 @@ global UI;
 %做一些初始化工作
 PAGE =h.PAGE;
 PARA=h.PARA;
+initCONFIG();
 UI.isOutput = 0;
 UI.isEnd = 0;
 UI.perview =0;
 imgs.p=1;
-imgs.y 
-imgs.x 
-initCONFIG();
+imgs.perview=[];
+[imgs.x,imgs.y]=func_newPage();
+
 %打开图片
 [filename, pathname, filterindex] = uigetfile({'*.PNG;*.jpg;*.tif',...
                   'Image Files (*.PNG,*.jpg,*.tif)'},'请选择输入图像 ...','MultiSelect','on');
@@ -127,6 +128,7 @@ h.font_size_edit.String =CONFIG.Fy;
 h.para_button.Enable = 'off';
 h.perview_checkbox.Enable = 'on';
 h.url_button.Enable = 'on';
+
 % --- 是否显示预览
 function perview_checkbox_Callback(hObject, eventdata, handles)
 global UI
@@ -197,6 +199,7 @@ CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
 CONFIG.x = CONFIG.padding+1;
 if(UI.perview==1)
     func_reflow();
+    h.show_division_button.Enable='on';
 end
 function height_edit_Callback(hObject, eventdata, handles)
 % hObject    handle to height_edit (see GCBO)
@@ -312,6 +315,41 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
+function font_size_edit_Callback(hObject, eventdata, handles)
+% hObject    handle to font_size_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of font_size_edit as text
+%        str2double(get(hObject,'String')) returns contents of font_size_edit as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function font_size_edit_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to font_size_edit (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- 显示切割信息按钮
+function show_division_button_Callback(hObject, eventdata, handles)
+global imgs;
+global properties;
+figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);
+func_showDivisiveImg(properties.section,'rectangle');
+s = size(properties.section,1);
+for i =1:s
+    for j= properties.section(i,7):properties.section(i,8)
+        func_showDivisiveImg(properties.charsAtRows{j},'rectangle');
+    end   
+end
+
 % --- 重排并输出
 function output_button_Callback(hObject, eventdata, handles)
 global UI;
@@ -420,7 +458,7 @@ global imgs;
 initProperties();% 初始化水平方向和垂直方向的投影,以及行信息和段信息
 func_charsReflow();
 imshow(imgs.perview);
-%% 文字回流(重排) cur
+%% 文字回流(重排)
 function func_charsReflow()
 global properties;
 global CONFIG;
@@ -435,7 +473,6 @@ s_size = size(properties.section,1);
 % y= CONFIG.y;
 x = imgs.x;%上一次保留的x y
 y = imgs.y;
-p =1;%输出文件的编号
 for i = 1:s_size
     sp =properties.section(i,:);
     T = sp(5);
@@ -492,8 +529,8 @@ function[x,y] = func_newPage()
 global imgs;
 global CONFIG;
 global UI;
-if(isempty(imgs.perview)==1)
-    imgs.perview = imgs.output;
+if(isfield(imgs,'output')&&isempty(imgs.perview)==1)
+     imgs.perview = imgs.output;
 end
 if(UI.isOutput==1)
     func_save(UI.outURL,strcat('p',num2str(imgs.p)),'jpg');
@@ -523,7 +560,7 @@ global CONFIG;
 global imgs;
 %!!!注意,properties.section里因为涉及到左上角x,y坐标,所以x是图片的x轴,即横轴,因此要倒过来用
 sx=uint16(ceil(position(2)));sy=uint16(ceil(position(1)));sw=uint16(ceil(position(3)));sh=uint16(ceil(position(4)));
-%线性缩放
+%线性缩放 bug 上面取整是否可以不要
 switch type
     case 'section'
         imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),CONFIG.Fx);
@@ -533,6 +570,9 @@ switch type
         x =x;
         y=y+sw;
     case 'char'%sx=0? 第10张有bug
+        if(sx==0)
+            sx
+        end
         imrs = imresize(imgs.g(sx:(sx+sh-1),sy:(sy+sw-1)),CONFIG.Fx*CONFIG.Fy);
         [sh,sw]=size(imrs);
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
@@ -576,75 +616,98 @@ end
 function split(row)
 global projection;
 global properties;
-
 global PARA;
-% showRow(row);
-temp = uint8(projection.allRows{row});
-c = size(temp,2);
-
-%% 输入
-% 行投影(改255,0),行信息
-result = zeros(1, c);
-%获得字符左右边界[闭区间]
-index = 1;
-for y = 1 : c - 1
-    if (temp(1, y) == 0 && temp(1, y + 1) == 255)
-        result(1, index) = y + 1;
-        index = index + 1;
-    elseif (temp(1, y) == 255 && temp(1, y + 1) == 0)
-        result(1, index) = y;
-        index = index + 1;
+hor =projection.allRows{row};
+[left,right] = func_getEdge(hor,'字符');
+w= right-left;
+n = size(left,2);
+blank = zeros(1,n);
+blank(2:n) = left(2:n)-right(1:end-1);
+i =2;
+while(i<=n)
+    if(w(i)<PARA.ONE_CHAR_WIDTH&&blank(i)<PARA.GAP*0.8)
+        left(i)=0;
+        right(i-1)=0;
     end
+    i=i+1;
 end
-
-result(index : c) = [];
-result = fixChars(result);
-
-[~, c] = size(result);
-index = 2;
-while (index < c)%英文字符之类的合并
-    if (result(1, index) - result(1, index - 1) <= PARA.GAP)
-        result(index - 1 : index) = [];
-        c = c - 2;
-    end
-    index = index + 1;
-end
-%% 输出
-% result 每对元素标记字符的左右边界
+left(left==0)=[];
+right(right==0)=[];
+w = right-left;
 % 转换为charProperty
-n = size(result,2);
-properties.charsAtRows{row}=zeros(n/2,4);
-c = 1;
-for i=1:2:n-1
-    x = result(i);
-    y = properties.allRows(row,1);
-    w = result(i+1)-x+1;
-    h = properties.allRows(row,2)-properties.allRows(row,1)-1;
-    properties.charsAtRows{row}(c,:)=[x,y,w,h];
-    c=c+1;
-end
-% func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
+n = size(w,2);
+properties.charsAtRows{row}=zeros(n,4);
+properties.charsAtRows{row}(:,1) = left(:);
+properties.charsAtRows{row}(:,2) = properties.allRows(row,1);
+properties.charsAtRows{row}(:,3) = w(:);
+properties.charsAtRows{row}(:,4) = properties.allRows(row,2)-properties.allRows(row,1)-1;
+% showRow(row);
+% temp = uint8(projection.allRows{row});
+% c = size(temp,2);
 
-%% 修复字符之间的断裂, 比如说 如 比
-function[arr] = fixChars(arr)
-global PARA;
-
-%% 输入
-% 标准字符宽度
-% 合并，例如  如  即  这些字
-[~, c] = size(arr);
-x = 2;
-while (x < c - 2)%合并可以改进
-    if (arr(1, x) - arr(1, x - 1) < PARA.ONE_CHAR_WIDTH*0.6)
-         if (arr(1, x + 2) - arr(1, x + 1) < PARA.ONE_CHAR_WIDTH*0.6)
-            if(arr(1,x+1)-arr(1,x)<2*PARA.GAP)
-               arr(x : x + 1) = [];
-                 c = c - 2;
-            end
-         end
-    end
-    x = x + 2;
-end
+% %% 输入
+% % 行投影(改255,0),行信息
+% result = zeros(1, c);
+% %获得字符左右边界[闭区间]
+% index = 1;
+% for y = 1 : c - 1
+%     if (temp(1, y) == 0 && temp(1, y + 1) == 255)
+%         result(1, index) = y + 1;
+%         index = index + 1;
+%     elseif (temp(1, y) == 255 && temp(1, y + 1) == 0)
+%         result(1, index) = y;
+%         index = index + 1;
+%     end
+% end
+% 
+% result(index : c) = [];
+% result = fixChars(result);
+% 
+% [~, c] = size(result);
+% index = 2;
+% while (index < c)%英文字符之类的合并
+%     if (result(1, index) - result(1, index - 1) <= PARA.GAP)
+%         result(index - 1 : index) = [];
+%         c = c - 2;
+%     end
+%     index = index + 1;
+% end
+% %% 输出
+% % result 每对元素标记字符的左右边界
+% % 转换为charProperty
+% n = size(result,2);
+% properties.charsAtRows{row}=zeros(n/2,4);
+% c = 1;
+% for i=1:2:n-1
+%     x = result(i);
+%     y = properties.allRows(row,1);
+%     w = result(i+1)-x+1;
+%     h = properties.allRows(row,2)-properties.allRows(row,1)-1;
+%     properties.charsAtRows{row}(c,:)=[x,y,w,h];
+%     c=c+1;
+% end
+% % func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
+% 
+% %% 修复字符之间的断裂, 比如说 如 比
+% function[arr] = fixChars(arr)
+% global PARA;
+% 
+% %% 输入
+% % 标准字符宽度
+% % 合并，例如  如  即  这些字
+% [~, c] = size(arr);
+% x = 2;
+% while (x < c - 2)%合并可以改进
+%     if (arr(1, x) - arr(1, x - 1) < PARA.ONE_CHAR_WIDTH*0.6)
+%          if (arr(1, x + 2) - arr(1, x + 1) < PARA.ONE_CHAR_WIDTH*0.6)
+%             if(arr(1,x+1)-arr(1,x)<2*PARA.GAP)
+%                arr(x : x + 1) = [];
+%                  c = c - 2;
+%             end
+%          end
+%     end
+%     x = x + 2;
+% end
 
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
@@ -675,7 +738,7 @@ switch type
         else
              for i=1:n%字符
                 position=properties(i,1:4);%注意,矩阵的x是竖轴和图像的x是横
-                rectangle('Position',position,'edgecolor','g');
+                rectangle('Position',position,'edgecolor',[rand,rand,rand]);
             end
         end
 end
@@ -725,6 +788,9 @@ for i = 1:row
     y= properties.allRows(i,1)+1;
     h = properties.allRows(i,2)-properties.allRows(i,1)-1;
     w=tail_blank-head_blank-1;
+    if(x==0)
+        x
+    end
     if(isImgSection(i,x,y,w,h)==1)%是否为图片段
         properties.section(s,:)=[x,y,w,h,head_blank/PAGE.WIDTH,1,i,i];%新建一段
         s=s+1;
@@ -796,7 +862,7 @@ while (i<=len)
 end
 properties.allRows(row+1:end,:)=[];
 %去躁点或者定筛选值???无需再考虑
-%需要考虑, 有亮点存在update
+%需要考虑, 有亮点存在update todo 再考虑ver
 tmp =properties.allRows(:,2)-properties.allRows(:,1);
 idx = tmp<PARA.ONE_ROW_HEIGHT*0.1;
 properties.allRows(idx,:)=[];% tmp =properties.allRows(:,2)-properties.allRows(:,1);
@@ -837,33 +903,18 @@ else
 end
 
 
-
-function font_size_edit_Callback(hObject, eventdata, handles)
-% hObject    handle to font_size_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hints: get(hObject,'String') returns contents of font_size_edit as text
-%        str2double(get(hObject,'String')) returns contents of font_size_edit as a double
-
-
-% --- Executes during object creation, after setting all properties.
-function font_size_edit_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to font_size_edit (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    empty - handles not created until after all CreateFcns called
-
-% Hint: edit controls usually have a white background on Windows.
-%       See ISPC and COMPUTER.
-if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
-    set(hObject,'BackgroundColor','white');
+%% 取得连续1或连续0的左右坐标
+function[left,right]=func_getEdge(arr,type)
+len = size(arr,2);
+A = zeros(1,len+1);
+B = zeros(1,len+1);
+A(1:len) = arr(:)&1;
+B(2:len+1)=arr(:)&1;
+R = A-B;
+left = find(R==1);
+right = find(R==-1);
+if(strcmp(type,'空格')==1)
+   tmp=right(1:end);
+   right=left(2:end);
+   left =tmp(1:end-1);
 end
-
-
-% --- Executes on button press in show_division_checkbox.
-function show_division_checkbox_Callback(hObject, eventdata, handles)
-% hObject    handle to show_division_checkbox (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
-
-% Hint: get(hObject,'Value') returns toggle state of show_division_checkbox

@@ -102,15 +102,6 @@ for i = 1:s
 end
 
 
-%% 显示某一行,debug用
-function showRow(i)
-global properties;
-global imgs;
-x =1;
-y= properties.allRows(i,1)+1;
-h = properties.allRows(i,2)-properties.allRows(i,1)-1;
-w=size(imgs.b,2);
-figure;imshow(func_getThePartOf('binary',x,y,w,h));
 
 
 
