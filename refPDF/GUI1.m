@@ -667,6 +667,8 @@ row =size(properties.allRows,1);
 s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
+last_w = 0;
+last_buttom = 0;
 for i = 1:row     
 %     if(i == 21)
 %          showRow(i);
@@ -692,6 +694,9 @@ for i = 1:row
             if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;
+            elseif(isClassTitle(w,h,last_w,x-last_buttom)==1)%小标题判断
+                properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
+                s=s+1;                    
             else%非图片,合并
                 %宽度的更新
                 if(last_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
@@ -708,9 +713,10 @@ for i = 1:row
         end
     end
     last_blank = head_blank;
+    last_w = w;
+    last_buttom = properties.allRows(i,2);
 end
 properties.section(s:end,:)=[];
-
 %% 获得每一行水平方向的投影,保存到projection.allRows
 function getRowsProjection()
 global PAGE;
@@ -801,8 +807,25 @@ else
         flag=1;
     end
 end
-
-
+%% 判断是否是小标题
+function[flag] =isClassTitle(w,h,last_w,last_spacing)
+% h这一行高度
+% last_w上一行宽
+% last_spacing 和上一行的行距
+global PARA;
+global PAGE;
+rel =PAGE.WIDTH-PAGE.SAFE-PARA.ONE_TAB_WIDTH;
+if(w>rel)
+    flag = 0;
+elseif(h>PARA.ONE_ROW_HEIGHT*1.25)
+    flag = 1;
+elseif(last_spacing>PARA.LINE_SPACING*1.5)
+    flag =1;
+elseif(last_w<rel)
+    flag =1;
+else
+    flag = 0;
+end
 %% 取得连续1或连续0的左右坐标
 function[left,right]=func_getEdge(arr,type)
 len = size(arr,2);

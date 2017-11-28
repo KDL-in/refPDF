@@ -187,8 +187,8 @@ end
 
 %--- 启动参数样本界面输入页面
 function para_button_Callback(hObject, eventdata, handles)
-% GUI2(hObject,handles);  %test
-testInit(hObject,handles);
+GUI2(hObject,handles);  %test
+% testInit(hObject,handles);
 handles.input_button.Enable ='on';
 % --- 设置路径
 function url_button_Callback(hObject, eventdata, handles)
@@ -391,8 +391,8 @@ for i = 1:s_size
                     y = floor(y+CONFIG.Fx*PAGE.WIDTH*sp(5));
 %                     y = floor(y+PARA.ONE_CHAR_WIDTH*CONFIG.Fx*CONFIG.Fy);%再额外缩进一个字符
                 end
-                [x,y]=func_append(x,y,chars(n,1:4),'char');
-                y = ceil(y+chars(n,3)*CONFIG.Fx+CONFIG.gap*properties.gaps{row}(n));%字体间隔
+                [x,y]=func_append(x,y,chars(n,1:4),'char');%cur
+                y = ceil(y+chars(n,3)*CONFIG.Fx*CONFIG.Fy++CONFIG.gap*properties.gapsAtRows{row}(n)*CONFIG.Fx);%字体间隔
             end
         end
     end
@@ -516,7 +516,7 @@ while(i<=n)
 end
 left(left==0)=[];
 right(right==0)=[];
-w = right-left;%tag
+w = right-left;
 
 % 转换为charProperty
 n = size(w,2);
@@ -526,8 +526,8 @@ properties.charsAtRows{row}(:,2) = properties.allRows(row,1);
 properties.charsAtRows{row}(:,3) = w(:);
 properties.charsAtRows{row}(:,4) = properties.allRows(row,2)-properties.allRows(row,1)-1;
 % 记录空白
-properties.gapsAtRow{row} = zeros(1,size(left,2));
-properties.gapsAtRow{row}(1:end-1) = left(2:end)-right(1:end-1);
+properties.gapsAtRows{row} = zeros(1,size(left,2));
+properties.gapsAtRows{row}(1:end-1) = left(2:end)-right(1:end-1);
 % showRow(row);
 
 % 
@@ -667,6 +667,8 @@ row =size(properties.allRows,1);
 s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
+last_w = 0;
+last_buttom = 0;
 for i = 1:row     
 %     if(i == 21)
 %          showRow(i);
@@ -692,6 +694,9 @@ for i = 1:row
             if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;
+            elseif(isClassTitle(h,last_w,x-last_buttom)==1)%小标题判断
+                properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
+                s=s+1;                    
             else%非图片,合并
                 %宽度的更新
                 if(last_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
@@ -708,9 +713,10 @@ for i = 1:row
         end
     end
     last_blank = head_blank;
+    last_w = w;
+    last_buttom = properties.allRows(i,2);
 end
 properties.section(s:end,:)=[];
-
 %% 获得每一行水平方向的投影,保存到projection.allRows
 function getRowsProjection()
 global PAGE;
@@ -801,7 +807,23 @@ else
         flag=1;
     end
 end
-
+%% 判断是否是小标题
+function[flag] =isClassTitle(h,last_w,last_spacing)
+% h这一行高度
+% last_w上一行宽
+% last_spacing 和上一行的行距
+global PARA;
+global PAGE;
+flag = 0;
+if(w>PAGE.WIDTH-PAGE.SAFE)
+elseif(h>PARA.ONE_ROW_HEIGHT*1.25)
+    flag = 1;
+elseif(last_spacing>PARA.LINE_SPACING*1.5)
+    flag =1;
+elseif(last_w<PAGE.WIDTH-PAGE.SAFE-PARA.ONE_TAB_WIDTH)
+    flag =1;
+else
+    flag = 0;
 
 %% 取得连续1或连续0的左右坐标
 function[left,right]=func_getEdge(arr,type)
