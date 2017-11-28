@@ -22,7 +22,7 @@ function varargout = GUI1(varargin)
 
 % Edit the above text to modify the response to help GUI1
 
-% Last Modified by GUIDE v2.5 27-Nov-2017 15:06:11
+% Last Modified by GUIDE v2.5 28-Nov-2017 18:28:07
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -62,7 +62,76 @@ function varargout = GUI1_OutputFcn(hObject, eventdata, handles)
 
 % Get default command line output from handles structure
 varargout{1} = handles.output;
-
+%% man以下是全局参数说明,参数为结构体,包含各种子参数
+global PAGE;
+% PAGE 感兴趣区域的实际有内容区域的信息, 左右边界以及宽度,包含
+%--LX 左边界
+%--LX 右边界
+%--UY 上边界
+%--DY 下边界
+%--WIDTH 实际内容的宽度
+%--SAFE预留切割的安全区域长度
+global PARA;
+% PARA 统计参数,经过统计得来的一些页面相关参数,包含
+%--ONE_CHAR_WIDTH   一个中文字符的标准宽
+%--ONE_TAB_WIDTH      一个首行缩进的标准宽
+%--ONE_ROW_HEIGHT   一行的标准高
+%--LINE_SPACING  行间隔
+%--TFTOOL 一个3.5个字符宽的数组, 数组全为1, 检测连续像素点用
+global projection;
+% projection 垂直方向和水平方向的投影,包含
+%--allRows 每一行的水平投影
+%--ver        页面垂直方向的投影
+global imgs;%灰度图像
+% imgs  输入图像,它的灰度图像,它的二值图像,以及输出图像
+%--imgs.o 原始图像
+%--imgs.g 灰度图像
+%--imgs.b 二值图像
+%--imgs.output 输出图像
+%--p 输出页面的序号
+%--x,y用户保留上一页重排最后的xy
+global properties;
+% properties是行分割,段分割的相关信息, 包含
+%--allRows:  行信息
+%----------它是一个n行2列的数组,它的结构为
+%----------[up, buttom],
+%----------即第x行, 上边界为up,下边界为buttom
+%--section: 段信息
+%----------它是一个s行8列数组,结构如下
+%----------[x,y,w,h,T,P,from,to]
+%----------分别是
+%----------position   :  x,y,w,h 左上角坐标,宽高
+%----------flag          :  T 缩进保留   P 是否图片
+%----------from-to    :  from  启始行      to 结束行
+%--charsAtRows: 字符信息
+%----------它是一个元胞数组, 共有n个元素,n为行数(图片行为空)
+%----------每一个元素是一个m行4列的数组,记录m个字符的信息
+%----------数组的结构是
+%----------[x,y,w,h]
+%----------x,y,w,h 左上角坐标,宽高
+global CONFIG;
+% CONFIG  用户设定的参数
+%--gap 字体间距
+%--padding 新文档内边距
+%--width 新文档宽
+%--height 新文档高
+%--Fy 字体放大倍数
+%--line_spacing 行距
+%--text_indent 缩进距离
+%--以上是用户设置,有默认值,以下是通过上面计算得来
+%--x 左上角x
+%--y 左上角y
+%--Fx 缩放因子 新文档宽/原文档宽
+global UI;
+% 界面上的设定数据
+%--perview 是否显示预览
+%--inURL 输入文件地址
+%--names 输入文件名数组
+%--index 当前文件下标
+%--outURL 输出文件地址
+%--isOutput 是否输出
+%--n图片的数量
+%--isEnd 图片读取结束标志
 
 %% GUI回调函数
 % ---输入图片
@@ -118,8 +187,8 @@ end
 
 %--- 启动参数样本界面输入页面
 function para_button_Callback(hObject, eventdata, handles)
-GUI2(hObject,handles);  %test
-% testInit(hObject,handles);
+% GUI2(hObject,handles);  %test
+testInit(hObject,handles);
 handles.input_button.Enable ='on';
 % --- 设置路径
 function url_button_Callback(hObject, eventdata, handles)
@@ -185,12 +254,13 @@ handles.url_button.Enable ='off';
 % --- Executes on button press in section_reflow_checkbox.
 
 %% 自定义函数
+
 %% 初始化 用户配置参数
 function initCONFIG()
 global CONFIG;
 global PARA;
 global PAGE;
-CONFIG.gap =PARA.GAP;
+CONFIG.gap =1;
 CONFIG.padding = 0;
 CONFIG.height = PAGE.HEIGHT;
 CONFIG.width= PAGE.WIDTH;
@@ -322,6 +392,7 @@ for i = 1:s_size
 %                     y = floor(y+PARA.ONE_CHAR_WIDTH*CONFIG.Fx*CONFIG.Fy);%再额外缩进一个字符
                 end
                 [x,y]=func_append(x,y,chars(n,1:4),'char');
+                y = ceil(y+chars(n,3)*CONFIG.Fx+CONFIG.gap*properties.gaps{row}(n));%字体间隔
             end
         end
     end
@@ -389,7 +460,7 @@ switch type
         [sh,sw]=size(imrs);
         imgs.output(x:(x+sh-1),y:(y+sw-1))=imrs(:,:);
         x =x;
-        y = ceil(y+sw+CONFIG.gap);
+%         y = ceil(y+sw+CONFIG.gap);
 end
 %% 根据传入高度换行返回新的坐标
 function[x,y]=func_newline(x,~,height)
@@ -454,14 +525,19 @@ properties.charsAtRows{row}(:,1) = left(:);
 properties.charsAtRows{row}(:,2) = properties.allRows(row,1);
 properties.charsAtRows{row}(:,3) = w(:);
 properties.charsAtRows{row}(:,4) = properties.allRows(row,2)-properties.allRows(row,1)-1;
+% 记录空白
+properties.gapsAtRow{row} = zeros(1,size(left,2));
+properties.gapsAtRow{row}(1:end-1) = left(2:end)-right(1:end-1);
 % showRow(row);
+
+% 
 % temp = uint8(projection.allRows{row});
 % c = size(temp,2);
-
-% %% 输入
-% % 行投影(改255,0),行信息
+% 
+% % 输入
+% 行投影(改255,0),行信息
 % result = zeros(1, c);
-% %获得字符左右边界[闭区间]
+% 获得字符左右边界[闭区间]
 % index = 1;
 % for y = 1 : c - 1
 %     if (temp(1, y) == 0 && temp(1, y + 1) == 255)
@@ -485,9 +561,9 @@ properties.charsAtRows{row}(:,4) = properties.allRows(row,2)-properties.allRows(
 %     end
 %     index = index + 1;
 % end
-% %% 输出
-% % result 每对元素标记字符的左右边界
-% % 转换为charProperty
+% % 输出
+% result 每对元素标记字符的左右边界
+% 转换为charProperty
 % n = size(result,2);
 % properties.charsAtRows{row}=zeros(n/2,4);
 % c = 1;
@@ -499,28 +575,28 @@ properties.charsAtRows{row}(:,4) = properties.allRows(row,2)-properties.allRows(
 %     properties.charsAtRows{row}(c,:)=[x,y,w,h];
 %     c=c+1;
 % end
-% % func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
-% 
-% %% 修复字符之间的断裂, 比如说 如 比
-% function[arr] = fixChars(arr)
-% global PARA;
-% 
-% %% 输入
-% % 标准字符宽度
-% % 合并，例如  如  即  这些字
-% [~, c] = size(arr);
-% x = 2;
-% while (x < c - 2)%合并可以改进
-%     if (arr(1, x) - arr(1, x - 1) < PARA.ONE_CHAR_WIDTH*0.6)
-%          if (arr(1, x + 2) - arr(1, x + 1) < PARA.ONE_CHAR_WIDTH*0.6)
-%             if(arr(1,x+1)-arr(1,x)<2*PARA.GAP)
-%                arr(x : x + 1) = [];
-%                  c = c - 2;
-%             end
-%          end
-%     end
-%     x = x + 2;
-% end
+% func_showDivisiveImg(properties.charsAtRows{row},'rectangle');%show
+
+%% 修复字符之间的断裂, 比如说 如 比
+function[arr] = fixChars(arr)
+global PARA;
+
+%% 输入
+% 标准字符宽度
+% 合并，例如  如  即  这些字
+[~, c] = size(arr);
+x = 2;
+while (x < c - 2)%合并可以改进
+    if (arr(1, x) - arr(1, x - 1) < PARA.ONE_CHAR_WIDTH*0.6)
+         if (arr(1, x + 2) - arr(1, x + 1) < PARA.ONE_CHAR_WIDTH*0.6)
+            if(arr(1,x+1)-arr(1,x)<2*PARA.GAP)
+               arr(x : x + 1) = [];
+                 c = c - 2;
+            end
+         end
+    end
+    x = x + 2;
+end
 
 %% 图像中显示各种分割线
 function  func_showDivisiveImg(properties,type)
@@ -592,9 +668,9 @@ s = 1;
 properties.section = zeros(row,8);
 last_blank = 0;
 for i = 1:row     
-%     if(i == row)
+%     if(i == 21)
 %          showRow(i);
-% %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
+% % %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %      end
     [head_blank,tail_blank] = trim(i);%计算开头的空白长度
     x = head_blank+1;
@@ -720,7 +796,8 @@ else
     hor = hor(1,x:len);
     tmp =and(hor,PARA.TFTOOL);
     blank = find(tmp==0);
-    if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)
+%     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)%tag
+    if(length(blank)<PARA.GAP)
         flag=1;
     end
 end
