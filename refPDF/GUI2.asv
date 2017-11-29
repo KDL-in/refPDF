@@ -212,8 +212,9 @@ PARA.ONE_TAB_WIDTH =  round(PARA.ONE_CHAR_WIDTH*2);
 % end
 [left,right]=func_getEdge(ver','空格');
 tmp = right-left;
-rel = median(tmp);
-PARA.LINE_SPACING = ceil(func_getStatistcalAVG(tmp(tmp>0.5*rel&tmp<1.5*rel)));
+tmp = 
+PARA.LINE_SPACING =floor()
+PARA.LINE_SPACING = floor(func_getStatistcalAVG(tmp));
 % PARA.GAP 统计字体间距
 % i = 1;
 % num=1;

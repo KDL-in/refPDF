@@ -109,6 +109,10 @@ global properties;
 %----------数组的结构是
 %----------[x,y,w,h]
 %----------x,y,w,h 左上角坐标,宽高
+%--gapsAtRows: 字符间隔信息
+%----------它是一个数组, 有n个元素,表示n+1个字符间的n个空白
+%--lineSpacings 行距信息
+%----------它是一个数组, 有n个元素,表示n+1行间的n个行距
 global CONFIG;
 % CONFIG  用户设定的参数
 %--gap 字体间距
@@ -269,7 +273,8 @@ CONFIG.Fx=w/double(PAGE.WIDTH);
 CONFIG.Fy=1;
 CONFIG.y = CONFIG.padding+1+floor(PAGE.SAFE*CONFIG.Fx);
 CONFIG.x = CONFIG.padding+1;
-CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
+% CONFIG.line_spacing = PARA.LINE_SPACING *CONFIG.Fy ;
+CONFIG.line_spacing = 1;
 CONFIG.text_indent = PARA.ONE_TAB_WIDTH*CONFIG.Fx*CONFIG.Fy;
 %% 获取edit中的数字
 function i = getValue(obj,hObject,handles)
@@ -381,7 +386,7 @@ for i = 1:s_size
                 %换行或换页
                 if(y+chars(n,3)*CONFIG.Fx*CONFIG.Fy > CONFIG.width-CONFIG.padding)%是否需要换行
                     [x,y] = func_newline(x,y,chars(n,4)*CONFIG.Fx*CONFIG.Fy);
-                    x = ceil(x+ CONFIG.line_spacing);
+                    x = ceil(x+ PARA.LINE_SPACING*CONFIG.Fx*CONFIG.line_spacing);
                 end
                 if(CONFIG.height-CONFIG.padding < x+chars(n,4)*CONFIG.Fx*CONFIG.Fy)%另起一页
                     [x,y]=func_newPage();
@@ -400,12 +405,14 @@ for i = 1:s_size
     % 换行, 图片换行以及段换行, 解决行距问题
     if(sp(6)==1)
         [x,y]=func_newline(x,y,sp(4)*CONFIG.Fx);
-        x = floor(x+CONFIG.line_spacing*0.5);
+%         x = floor(x+CONFIG.line_spacing*0.5);
     else%换行换的是最后一行的高度
         h = properties.allRows(sp(8),2)-properties.allRows(sp(8),1)-1;
         [x,y]=func_newline(x,y,h*CONFIG.Fx*CONFIG.Fy);
-        x = ceil(x+ CONFIG.line_spacing);
+%         x = ceil(x+ CONFIG.line_spacing);
     end
+    to = sp(8);
+    x = ceil(x+properties.lineSpacings(to)*CONFIG.Fx*CONFIG.line_spacing);
 end
  imgs.x = x;
  imgs.y = y;
@@ -666,13 +673,13 @@ global properties;
 row =size(properties.allRows,1);
 s = 1;
 properties.section = zeros(row,8);
-last_blank = 0;
-last_w = 0;
+last_head_blank = 0;
+last_tail_blank = 0;
 last_buttom = 0;
 for i = 1:row     
 %     if(i == 21)
 %          showRow(i);
-% % %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
+% % % %          figure;imshow(func_getThePartOf('binary',x,y,w,h));
 %      end
     [head_blank,tail_blank] = trim(i);%计算开头的空白长度
     x = head_blank+1;
@@ -694,13 +701,13 @@ for i = 1:row
             if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;
-            elseif(isClassTitle(w,h,last_w,x-last_buttom)==1)%小标题判断
+            elseif(isClassTitle(w,h,last_tail_blank,y-last_buttom)==1)%小标题判断
                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
                 s=s+1;                    
             else%非图片,合并
                 %宽度的更新
-                if(last_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
-                    properties.section(s-1,3)=properties.section(s-1,3)+last_blank-head_blank;
+                if(last_head_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
+                    properties.section(s-1,3)=properties.section(s-1,3)+last_head_blank-head_blank;
                 end
                 if(w>properties.section(s-1,3))%更新成最大的
                     properties.section(s-1,3)=w;
@@ -712,8 +719,8 @@ for i = 1:row
             end
         end
     end
-    last_blank = head_blank;
-    last_w = w;
+    last_head_blank = head_blank;
+    last_tail_blank = PAGE.WIDTH-tail_blank-PAGE.SAFE+1;
     last_buttom = properties.allRows(i,2);
 end
 properties.section(s:end,:)=[];
@@ -758,7 +765,7 @@ global PARA;
 % properties.allRows(:,1)=left(:)-1;
 % properties.allRows(:,2) =right(:);
 %去躁点或者定筛选值???无需再考虑
-%需要考虑, 有亮点存在update todo 再考虑ver
+%需要考虑, 有亮点存在update  再考虑ver
 w =right-left;
 idx =w<PARA.ONE_ROW_HEIGHT*0.1;
 n =size(idx,2);
@@ -772,7 +779,8 @@ left(idx) =[];
 properties.allRows=zeros(size(left,2),2);
 properties.allRows(:,1)=left(:)-1;
 properties.allRows(:,2) =right(:);
-
+properties.lineSpacings= zeros(1,size(left,2));
+properties.lineSpacings(1:end-1)=left(2:end)-right(1:end-1);
 %% 水平方向或垂直方向的投影
 function[arr]=func_projectTo(img,type)
 % @输入
@@ -808,9 +816,10 @@ else
     end
 end
 %% 判断是否是小标题
-function[flag] =isClassTitle(w,h,last_w,last_spacing)
-% h这一行高度
-% last_w上一行宽
+function[flag] =isClassTitle(w,h,last_tail_blank,last_spacing)
+% w行宽
+% h行高度
+% last_tail_blank上一行末空白
 % last_spacing 和上一行的行距
 global PARA;
 global PAGE;
@@ -819,9 +828,9 @@ if(w>rel)
     flag = 0;
 elseif(h>PARA.ONE_ROW_HEIGHT*1.25)
     flag = 1;
-elseif(last_spacing>PARA.LINE_SPACING*1.5)
+elseif(last_spacing>PARA.LINE_SPACING*1.9)
     flag =1;
-elseif(last_w<rel)
+elseif(last_tail_blank>PARA.ONE_TAB_WIDTH)
     flag =1;
 else
     flag = 0;
