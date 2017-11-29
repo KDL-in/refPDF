@@ -673,6 +673,7 @@ global properties;
 row =size(properties.allRows,1);
 s = 1;
 properties.section = zeros(row,8);
+properties.tableFlag = 0;
 last_head_blank = 0;
 last_tail_blank = 0;
 last_buttom = 0;
@@ -694,16 +695,29 @@ for i = 1:row
             properties.section(s,:)=[x,y,w,h,0,0,i,i];%认为是新的一段
             if(head_blank-PAGE.SAFE>PARA.ONE_TAB_WIDTH*1.4)%大于一个标准缩进值update 英文的话这里可能要改
                 properties.section(s,5)=head_blank/PAGE.WIDTH;%计算它相对缩减值
-%                 showRow(i);
+                if(properties.tableFlag==1)%表格标记,全部标记图片
+                    properties.section(s,6)=1;
+                end
+                %                 showRow(i); tag
+            else%知道遇到正常缩进, 表格标记结束
+                properties.tableFlag=0;
             end
             s=s+1;
         else%无空格, 那么这一行和上一段合并
-            if(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
+            if(isClassTitle(w,h,last_tail_blank,y-last_buttom)==1)%小标题判断
                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
-                s=s+1;
-            elseif(isClassTitle(w,h,last_tail_blank,y-last_buttom)==1)%小标题判断
-                properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
-                s=s+1;                    
+                s=s+1;  
+                properties.tableFlag = 0;
+            elseif(s==1 || properties.section(s-1,6)==1)%上一段是否为图片update
+                if(properties.tableFlag==1)
+                   properties.section(s,:)=[x,y,w,h,head_blank/PAGE.WIDTH,1,i,i];
+                else
+                    properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
+                end
+                s=s+1;%tag
+%             elseif(isClassTitle(w,h,last_tail_blank,y-last_buttom)==1)%小标题判断
+%                 properties.section(s, :)=[x,y,w,h, 0, 0, i, i];
+%                 s=s+1;                    
             else%非图片,合并
                 %宽度的更新
                 if(last_head_blank>PARA.ONE_CHAR_WIDTH)%两行的情况
@@ -799,6 +813,7 @@ end
 function [flag] =isImgSection(idx,x,~,~,h)
 global PARA;
 global projection;
+global properties;
 flag = 0;
 hor = projection.allRows{idx};
 %从行的高度判断
@@ -813,6 +828,7 @@ else
 %     if(length(blank)<PARA.ONE_CHAR_WIDTH*0.05)%tag
     if(length(blank)<PARA.GAP)
         flag=1;
+        properties.tableFlag =1;%表格开始标记 tag
     end
 end
 %% 判断是否是小标题
