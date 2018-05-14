@@ -230,9 +230,12 @@ end
 function show_division_button_Callback(hObject, eventdata, handles)
 global imgs;
 global properties;
-figure;imshow(imgs.g);set(gca,'position',[0,0,1,1]);
+figure;imshow(imgs.g);
+% set(gca,'position',[0,0,1,1]);
 func_showDivisiveImg(properties.section,'rectangle');
 s = size(properties.section,1);
+figure;imshow(imgs.g);
+% set(gca,'position',[0,0,1,1]);
 for i =1:s
     for j= properties.section(i,7):properties.section(i,8)
         if(properties.section(i,6)~=1)
@@ -803,7 +806,7 @@ function[arr]=func_projectTo(img,type)
 % @返回
 % arr      投影结果
 if(strcmp(type,'horizontal'))
-    arr =sum(img(:,:));
+    arr =sum(img(:,:));%二重循环投影的矩阵运算
 else
     img = img';
     arr = sum(img(:,:));
